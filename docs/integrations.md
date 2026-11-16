@@ -55,11 +55,12 @@ transform-feedback operation or an application query.
 
 Rebuilt wrappers perform frame preparation, viewport setup, state preservation,
 and rendering in one native call. Success does not require a second error-query
-call. GL limits and snapshot storage are cached in the owning context; only the
-fragment texture units that projectM can use are visited. Unchanged output sizes
-are not submitted again. Existing wrapper DLLs fall back to the original Python
-rendering path automatically. Rebuild using the root README to enable the native
-frame operation; no dependency change is required.
+call. GL limits and snapshot storage are cached in the owning context. Shared
+caller state is preserved across all combined texture units; private workers
+skip preservation entirely. Unchanged output sizes are not submitted again.
+Existing wrapper DLLs fall back to the original Python rendering path
+automatically. Rebuild using the root README to enable the native frame
+operation; no dependency change is required.
 
 On EGL systems, select the matching PyOpenGL platform **before importing**
 `python_projectm` or `OpenGL`, for example `PYOPENGL_PLATFORM=egl`. The context
@@ -360,6 +361,7 @@ or frame failures stop the worker and are retained in `thread.error`.
 per-frame state snapshots. Submitted PCM is copied into reusable native-dtype
 buffers, which return to the pool after consumption. Call `set_fps(value)` to
 queue a change to both worker pacing and projectM's frame-rate setting.
+
 Connect frame signals to GUI-thread slots and keep consumers fast enough for
 the selected frame rate.
 

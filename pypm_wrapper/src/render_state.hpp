@@ -6,13 +6,14 @@
 namespace pypm_detail {
 
 // Limits and scratch storage belong to one instance and its original GL context.
-// projectM binds fragment textures consecutively from unit zero. Units outside
-// GL_MAX_TEXTURE_IMAGE_UNITS are neither prepared nor changed by this renderer.
+// Preserve all combined texture units: preset descriptors can bind units even
+// when a shader optimizer removes the corresponding sampler uniforms.
 class RenderState {
 public:
     RenderState()
     {
-        m_textures.resize(get(GL_MAX_TEXTURE_IMAGE_UNITS));
+        m_fragmentTextureUnits = get(GL_MAX_TEXTURE_IMAGE_UNITS);
+        m_textures.resize(get(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS));
         m_clipEnabled.resize(get(GL_MAX_CLIP_DISTANCES));
         m_drawBuffers.resize(get(GL_MAX_DRAW_BUFFERS));
         m_indexedBlend = get(GL_MAJOR_VERSION) >= 4;
@@ -72,7 +73,7 @@ public:
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
         for (GLuint index = 0; index < m_clipEnabled.size(); ++index)
             glDisable(GL_CLIP_DISTANCE0 + index);
-        for (GLuint unit = 0; unit < m_textures.size(); ++unit)
+        for (GLint unit = 0; unit < m_fragmentTextureUnits; ++unit)
             glBindSampler(unit, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -188,6 +189,7 @@ private:
     };
 
     bool m_indexedBlend{};
+    GLint m_fragmentTextureUnits{};
     GLint m_draw{}, m_read{}, m_readBuffer{}, m_program{}, m_vao{}, m_arrayBuffer{};
     GLint m_renderbuffer{}, m_packBuffer{}, m_unpackBuffer{}, m_activeTexture{}, m_polygonMode{};
     GLfloat m_lineWidth{};

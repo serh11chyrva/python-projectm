@@ -47,6 +47,7 @@ class ProjectMWidget(QOpenGLWidget):
         self._preset = None
         self._initialization_failed = False
         self._rendering = False
+        self._awaiting_swap = False
         self._fps = integer(fps, "fps")
         self._next_frame = time.monotonic()
         self._timer = QTimer(self)
@@ -75,11 +76,15 @@ class ProjectMWidget(QOpenGLWidget):
         if self.pm is not None:
             self._apply_command(("__fps__", (self._fps,), {}))
             self._rendering = True
+            self._awaiting_swap = False
             self._next_frame = time.monotonic()
             self._timer.start(0)
 
     @Slot()
     def _schedule_frame(self):
+        if not self._awaiting_swap:
+            return
+        self._awaiting_swap = False
         if not self._rendering or not self.isVisible():
             return
         now = time.monotonic()
@@ -133,9 +138,11 @@ class ProjectMWidget(QOpenGLWidget):
             try:
                 self.pm.set_size(*self._pixel_size())
                 self.pm.render(framebuffer=int(self.defaultFramebufferObject()))
+                self._awaiting_swap = True
                 self.frame_rendered.emit()
             except Exception as error:
                 self._rendering = False
+                self._awaiting_swap = False
                 self._timer.stop()
                 self.error.emit(error)
 
@@ -205,6 +212,7 @@ class ProjectMWidget(QOpenGLWidget):
         """
         require_gui_thread()
         self._rendering = False
+        self._awaiting_swap = False
         self._timer.stop()
         self._initialization_failed = False
         if self.pm is not None:
