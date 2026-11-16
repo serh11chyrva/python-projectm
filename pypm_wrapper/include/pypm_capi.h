@@ -58,6 +58,17 @@ PYPM_API void pypm_reset_textures(pypm_context_t* ctx);
 
 PYPM_API void pypm_render_frame(pypm_context_t* ctx);
 PYPM_API void pypm_render_frame_to_fbo(pypm_context_t* ctx, unsigned int framebuffer);
+/* Optional frame operation. Returns 1 on success (including a suspended frame),
+   or 0 with pypm_get_last_error() set. The original GL context must be current.
+   State preparation, viewport sizing and rendering execute in this one call.
+   Existing entry points retain their original signatures and behavior. */
+enum pypm_render_flags {
+    PYPM_RENDER_BIND_FRAMEBUFFER = 1u,
+    PYPM_RENDER_PRESERVE_STATE = 2u
+};
+PYPM_API int pypm_render_frame_ex(
+    pypm_context_t* ctx, unsigned int framebuffer, unsigned int flags
+);
 PYPM_API void pypm_set_window_size(pypm_context_t* ctx, size_t w, size_t h);
 PYPM_API void pypm_get_window_size(pypm_context_t* ctx, size_t* w, size_t* h);
 

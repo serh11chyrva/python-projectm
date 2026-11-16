@@ -19,6 +19,7 @@ endif()
 
 add_library(pypm_capi SHARED
     src/pypm_capi.cpp
+    src/render_state.hpp
     include/pypm_capi.h
 )
 

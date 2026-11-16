@@ -11,7 +11,7 @@ from python_projectm.core.validation import dimensions, integer
 from python_projectm.gl.context import ContextGuard, require_desktop_gl
 from python_projectm.gl.state import GLStateGuard, prepare_render_state
 from python_projectm.native import bindings as native
-from python_projectm.native.errors import NativeError
+from python_projectm.native.errors import NativeError, NativeSymbolError
 
 
 class ProjectMCore:
@@ -25,6 +25,8 @@ class ProjectMCore:
     def __init__(self):
         self._alive = False
         self._ctx = None
+        self._size: tuple[int, int] | None = None
+        self._native_render_available = True
         self._guard = ContextGuard()
         require_desktop_gl()
         with GLStateGuard():
@@ -98,13 +100,18 @@ class ProjectMCore:
         rendering without destroying the instance or its context.
         """
         width, height = dimensions(width, height, allow_zero=True)
+        self._check_alive()
+        if self._size == (width, height):
+            return
         self._call(native.pypm_set_window_size, width, height)
+        self._size = (width, height)
 
     def get_size(self) -> tuple[int, int]:
         """Return the configured output ``(width, height)`` in physical pixels."""
         width, height = ctypes.c_size_t(), ctypes.c_size_t()
         self._call(native.pypm_get_window_size, ctypes.byref(width), ctypes.byref(height))
-        return width.value, height.value
+        self._size = (width.value, height.value)
+        return self._size
 
     def render(self, *, framebuffer: int | None = None, preserve_state: bool = True) -> None:
         """Render one frame with the original OpenGL context current.
@@ -121,6 +128,23 @@ class ProjectMCore:
         self._check_alive()
         if framebuffer is not None:
             framebuffer = integer(framebuffer, "framebuffer", minimum=0, maximum=2**32 - 1)
+        if self._native_render_available:
+            flags = native.PYPM_RENDER_PRESERVE_STATE if preserve_state else 0
+            if framebuffer is not None:
+                flags |= native.PYPM_RENDER_BIND_FRAMEBUFFER
+            try:
+                succeeded = native.pypm_render_frame_ex(self._ctx, framebuffer or 0, flags)
+            except NativeSymbolError:
+                # Older wrappers remain usable through the original rendering API.
+                self._native_render_available = False
+            else:
+                if not succeeded:
+                    try:
+                        native.check_error()
+                    except NativeError as error:
+                        raise ProjectMError(str(error)) from error
+                    raise ProjectMError("The native frame operation failed without an error message")
+                return
         width, height = self.get_size()
         if width == 0 or height == 0:
             return

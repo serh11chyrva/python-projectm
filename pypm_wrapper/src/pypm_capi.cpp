@@ -10,6 +10,8 @@
 #include <GL/glext.h>
 #endif
 
+#include "render_state.hpp"
+
 #include <projectM-4/audio.h>
 #include <projectM-4/callbacks.h>
 #include <projectM-4/core.h>
@@ -25,6 +27,7 @@
 struct pypm_context {
     projectm_handle pm = nullptr;
     bool preset_failed = false;
+    std::unique_ptr<pypm_detail::RenderState> render_state;
 };
 
 namespace {
@@ -106,6 +109,7 @@ pypm_context_t* pypm_create(void)
         while (glGetError() != GL_NO_ERROR) {}
 #endif
         auto ctx = std::make_unique<pypm_context_t>();
+        ctx->render_state = std::make_unique<pypm_detail::RenderState>();
         ctx->pm = projectm_create();
         if (!ctx->pm)
             throw std::runtime_error("projectM initialization failed; OpenGL 3.3 or newer is required");
@@ -182,6 +186,34 @@ void pypm_render_frame_to_fbo(pypm_context_t* ctx, unsigned int framebuffer)
 void pypm_set_window_size(pypm_context_t* ctx, size_t width, size_t height)
 {
     invoke(ctx, [&](projectm_handle pm) { projectm_set_window_size(pm, width, height); });
+}
+
+int pypm_render_frame_ex(pypm_context_t* ctx, unsigned int framebuffer, unsigned int flags)
+{
+    return guarded([&]() {
+        if (!ctx || !ctx->pm)
+            throw std::invalid_argument("Invalid projectM context");
+        if (flags & ~(PYPM_RENDER_BIND_FRAMEBUFFER | PYPM_RENDER_PRESERVE_STATE))
+            throw std::invalid_argument("Unknown frame rendering flags");
+        size_t width = 0, height = 0;
+        projectm_get_window_size(ctx->pm, &width, &height);
+        if (!width || !height)
+            return 1;
+        const bool bind = (flags & PYPM_RENDER_BIND_FRAMEBUFFER) != 0;
+        const bool preserve = (flags & PYPM_RENDER_PRESERVE_STATE) != 0;
+        if (bind && framebuffer && !glIsFramebuffer(framebuffer))
+            throw std::invalid_argument("The requested framebuffer does not exist in the current context");
+        pypm_detail::RenderStateGuard state(*ctx->render_state, preserve);
+        pypm_detail::DrawFramebufferGuard draw(bind && !preserve);
+        if (bind)
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+        if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            throw std::runtime_error("The draw framebuffer is incomplete");
+        ctx->render_state->prepare();
+        glViewport(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
+        projectm_opengl_render_frame(ctx->pm);
+        return last_error[0] ? 0 : 1;
+    }, 0);
 }
 
 void pypm_get_window_size(pypm_context_t* ctx, size_t* width, size_t* height)

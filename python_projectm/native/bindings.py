@@ -56,6 +56,11 @@ pypm_render_frame = _bind("pypm_render_frame", argtypes=[ContextHandle])
 pypm_render_frame_to_fbo = _bind(
     "pypm_render_frame_to_fbo", argtypes=[ContextHandle, c_uint]
 )
+PYPM_RENDER_BIND_FRAMEBUFFER = 1
+PYPM_RENDER_PRESERVE_STATE = 2
+pypm_render_frame_ex = _bind(
+    "pypm_render_frame_ex", restype=c_int, argtypes=[ContextHandle, c_uint, c_uint]
+)
 
 for _name in ("window_size", "mesh_size"):
     globals()[f"pypm_set_{_name}"] = _bind(
