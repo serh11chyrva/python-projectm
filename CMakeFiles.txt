@@ -1,0 +1,63 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(python_projectm_native
+    LANGUAGES C CXX
+)
+
+# ============================================================
+# Global options
+# ============================================================
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Where final binaries should go
+set(PYPM_NATIVE_BIN_DIR
+    ${CMAKE_SOURCE_DIR}/python_projectm/native/bin
+)
+
+message(STATUS "Native binaries will be placed in:")
+message(STATUS "  ${PYPM_NATIVE_BIN_DIR}")
+
+# ============================================================
+# libprojectM (submodule)
+# ============================================================
+
+add_subdirectory(libprojectM-4.1.6)
+
+# ============================================================
+# pypm_wrapper
+# ============================================================
+
+add_subdirectory(pypm_wrapper)
+
+# ============================================================
+# Post-build: copy binaries
+# ============================================================
+
+# pypm_capi target name must match wrapper
+add_custom_command(
+    TARGET pypm_capi
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${PYPM_NATIVE_BIN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:pypm_capi>
+        ${PYPM_NATIVE_BIN_DIR}
+)
+
+# ------------------------------------------------------------
+# Also copy projectM runtime (Windows)
+# ------------------------------------------------------------
+
+if (WIN32)
+    add_custom_command(
+        TARGET pypm_capi
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:projectM-4>
+            ${PYPM_NATIVE_BIN_DIR}
+    )
+endif()

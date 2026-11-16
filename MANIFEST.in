@@ -1,0 +1,18 @@
+include README.md
+include LICENSE
+include pyproject.toml
+
+recursive-include python_projectm *.py
+recursive-include python_projectm *.dll *.so *.dylib
+
+recursive-include pypm_wrapper *
+recursive-include libprojectM-4.1.6 *
+
+include CMakeLists.txt
+
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.pdb
+global-exclude *.exp
+global-exclude *.lib
+global-exclude *.a
