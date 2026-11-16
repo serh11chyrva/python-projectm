@@ -10,12 +10,14 @@ from python_projectm.utils.threading import ThreadGuard
 
 
 def require_gui_thread() -> None:
+    """Raise RuntimeError unless a Qt GUI application exists on the calling thread."""
     app = QGuiApplication.instance()
     if app is None or QThread.currentThread() != app.thread():
         raise RuntimeError("This operation requires a QGuiApplication and its GUI thread")
 
 
 def opengl_format() -> QSurfaceFormat:
+    """Return a desktop OpenGL 3.3 core-profile format for Qt surfaces."""
     format = QSurfaceFormat()
     format.setRenderableType(QSurfaceFormat.RenderableType.OpenGL)
     format.setVersion(3, 3)
@@ -40,16 +42,19 @@ class QtGLContext:
             raise RuntimeError("Qt context adapter is closed")
 
     def make_current(self) -> None:
+        """Activate the borrowed Qt context and surface on the creating thread."""
         self._check()
         if not self._ctx.makeCurrent(self._surface):
             raise RuntimeError("Qt could not make the OpenGL context current")
 
     def done_current(self) -> None:
+        """Release the context; use :meth:`current` to restore a preceding context."""
         self._check()
         self._ctx.doneCurrent()
 
     @contextmanager
     def current(self):
+        """Activate the borrowed context and restore the preceding Qt context."""
         self._check()
         previous = QOpenGLContext.currentContext()
         previous_surface = previous.surface() if previous is not None else None
@@ -67,6 +72,7 @@ class QtGLContext:
                     self._ctx.doneCurrent()
 
     def get_size(self) -> tuple[int, int]:
+        """Return the surface's drawable size in physical pixels."""
         self._check()
         size = self._surface.size()
         ratio = self._surface.devicePixelRatio() if hasattr(self._surface, "devicePixelRatio") else 1
@@ -74,7 +80,12 @@ class QtGLContext:
 
 
 class QtOffscreenContext(QtGLContext):
-    """Own an offscreen Qt context and surface on the GUI thread."""
+    """Own an offscreen Qt context and surface on the GUI thread.
+
+    An existing QGuiApplication is required. ``share_context`` optionally
+    selects a Qt context with which to share resources. Close renderers before
+    this adapter, or nest their lifetime scopes inside its ``with`` statement.
+    """
 
     def __init__(self, *, share_context: QOpenGLContext | None = None):
         require_gui_thread()
@@ -96,6 +107,7 @@ class QtOffscreenContext(QtGLContext):
         super().__init__(context, surface)
 
     def close(self) -> None:
+        """Destroy the owned Qt context and surface on the GUI thread."""
         if self._closed:
             return
         self._check()

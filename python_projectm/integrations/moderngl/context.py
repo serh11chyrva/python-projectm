@@ -24,18 +24,25 @@ class ModernGLContext:
         self._depth = 0
 
     def make_current(self) -> None:
+        """Enter an activation scope, paired with :meth:`done_current`."""
         self._thread.check()
         manager = self.current()
         manager.__enter__()
         self._activations.append(manager)
 
     def done_current(self) -> None:
+        """Exit the latest activation scope on the creating thread."""
         self._thread.check()
         manager = self._activations.pop()
         manager.__exit__(None, None, None)
 
     @contextmanager
     def current(self):
+        """Activate through the supplied callback, or require an already current context.
+
+        Nested scopes reuse the active native context. The application owns
+        both the ModernGL context and the callback's restoration behavior.
+        """
         self._thread.check()
         if self._depth:
             self._depth += 1
@@ -53,5 +60,6 @@ class ModernGLContext:
                     self._depth = 0
 
     def get_size(self) -> tuple[int, int]:
+        """Return the adapter's configured physical-pixel output dimensions."""
         self._thread.check()
         return self.width, self.height

@@ -11,7 +11,19 @@ from python_projectm.gl.state import GLStateGuard
 
 
 class NumpyRenderer(Renderer):
-    """Read projectM frames into CPU memory, borrowing GL or owning a hidden GLFW window."""
+    """Read projectM frames into CPU memory through desktop OpenGL.
+
+    Args:
+        width: Positive frame width in physical pixels.
+        height: Positive frame height in physical pixels.
+        context: Borrowed GL adapter, or ``None`` to own a hidden GLFW window.
+            The default requires the ``glfw`` extra and main-thread use.
+        flip_y: Return frames with a top-left origin by default.
+        preserve_state: Preserve the GL state used by rendering and readback.
+
+    Returned frames are writable, C-contiguous RGBA uint8 arrays. This renderer
+    performs GPU-to-CPU readback and still needs an OpenGL implementation.
+    """
 
     def __init__(self, width: int, height: int, *, context=None, flip_y: bool = True,
                  preserve_state: bool = True):
@@ -34,11 +46,13 @@ class NumpyRenderer(Renderer):
 
     @property
     def framebuffer(self) -> TextureFramebuffer:
+        """Owned output framebuffer; resize and close invalidate this resource."""
         self._check()
         return self._target
 
     @property
     def texture_id(self) -> int:
+        """OpenGL ID of the current owned RGBA8 texture."""
         return self.framebuffer.texture_id
 
     @property
@@ -47,6 +61,7 @@ class NumpyRenderer(Renderer):
         return getattr(self.context, "window", None)
 
     def resize(self, width: int, height: int) -> None:
+        """Replace the output framebuffer with positive physical-pixel dimensions."""
         width, height = dimensions(width, height)
         if (width, height) == self.size:
             self._check()
@@ -64,7 +79,17 @@ class NumpyRenderer(Renderer):
 
     def render_frame(self, *, out: np.ndarray | None = None,
                      flip_y: bool | None = None) -> np.ndarray:
-        """Return RGBA uint8 (height, width, 4); optionally reuse an output array."""
+        """Render and read an RGBA uint8 array of shape ``(height, width, 4)``.
+
+        Args:
+            out: Optional writable C-contiguous uint8 destination of the exact
+                output shape. It is returned directly instead of allocating.
+            flip_y: Override the renderer's row orientation for this frame.
+                ``None`` uses the constructor setting.
+
+        Returns:
+            A writable, C-contiguous frame, or the supplied ``out`` array.
+        """
         with self.current() as pm:
             with GLStateGuard() if self.preserve_state else nullcontext():
                 pm.set_size(self.width, self.height)
@@ -77,6 +102,11 @@ class NumpyRenderer(Renderer):
     render = render_frame
 
     def close(self) -> None:
+        """Release output resources and projectM, then close an owned GLFW context.
+
+        Borrowed adapters remain alive. The application controls global GLFW
+        termination, including when this renderer created a hidden window.
+        """
         if not self.closed:
             with self.current():
                 self._target.close()

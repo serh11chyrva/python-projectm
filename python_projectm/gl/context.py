@@ -9,6 +9,7 @@ from python_projectm.core.errors import ProjectMContextError
 
 
 def current_context_id() -> int:
+    """Return the current native OpenGL context identifier, or zero if absent."""
     return int(platform.PLATFORM.GetCurrentContext() or 0)
 
 
@@ -22,6 +23,7 @@ class ContextGuard:
             raise ProjectMContextError("An OpenGL context must be current on this thread")
 
     def check(self) -> None:
+        """Raise ProjectMContextError if the creating thread or context differs."""
         if threading.get_ident() != self.thread_id:
             raise ProjectMContextError("OpenGL resources must be used on their creating thread")
         if current_context_id() != self.context_id:
@@ -29,6 +31,7 @@ class ContextGuard:
 
 
 def require_desktop_gl() -> None:
+    """Raise ProjectMContextError unless desktop OpenGL 3.3+ is current."""
     version = GL.glGetString(GL.GL_VERSION)
     if not version or version.startswith(b"OpenGL ES"):
         raise ProjectMContextError("projectM requires a desktop OpenGL 3.3 or newer context")

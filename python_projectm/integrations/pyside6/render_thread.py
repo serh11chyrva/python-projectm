@@ -15,6 +15,12 @@ from python_projectm.integrations.pyside6.context import QtGLContext, opengl_for
 
 
 class FrameEmitter(QObject):
+    """Qt signals carrying worker frames, errors, and cleanup completion.
+
+    ``frame_ready`` emits a NumPy RGBA frame, ``error`` emits an exception, and
+    ``finished`` has no arguments. Connect frame consumers to GUI-thread slots.
+    """
+
     frame_ready = Signal(object)
     error = Signal(object)
     finished = Signal()
@@ -25,6 +31,18 @@ class RenderThread(threading.Thread):
 
     The surface is created/destroyed on the GUI thread, while the GL context,
     projectM instance, and framebuffer live exclusively on the render thread.
+
+    Args:
+        width: Positive output width in physical pixels.
+        height: Positive output height in physical pixels.
+        emitter: Usually a :class:`FrameEmitter` created on the GUI thread.
+        fps: Positive render-loop frame-rate target.
+
+    Preset, PCM, and resize methods enqueue commands and can be called before
+    ``start()``. The queue holds 128 commands; a full queue raises ``queue.Full``
+    without blocking. Initialization or frame failures stop the worker; command
+    errors are emitted while rendering continues. ``error`` retains the most
+    recently reported exception and ``renderer`` is available only while active.
     """
 
     def __init__(self, width, height, emitter, fps=60):
@@ -58,20 +76,25 @@ class RenderThread(threading.Thread):
         self._commands.put_nowait((name, args, kwargs))
 
     def load_preset(self, preset_path, *, smooth: bool = True) -> None:
+        """Queue a preset path or projectM URL, optionally with a smooth transition."""
         self._enqueue("load_preset_file", preset_path, smooth=smooth)
 
     load_preset_file = load_preset
 
     def load_preset_data(self, data: str, *, smooth: bool = True) -> None:
+        """Queue Milkdrop source text for loading in the render thread's context."""
         self._enqueue("load_preset_data", data, smooth=smooth)
 
     def add_pcm(self, samples, channels: int | None = None) -> None:
+        """Copy PCM before enqueueing it so the caller may reuse its input buffer."""
         self._enqueue("add_pcm", np.array(samples, copy=True, order="C"), channels)
 
     def resize(self, width: int, height: int) -> None:
+        """Queue positive output dimensions; allocate replacements on the worker."""
         self._enqueue("resize", *dimensions(width, height))
 
     def run(self):
+        """Run the worker loop; invoke through ``start()``, not directly from the GUI."""
         context = None
         renderer = None
         try:
@@ -127,6 +150,7 @@ class RenderThread(threading.Thread):
                     signal.emit()
 
     def stop(self) -> None:
+        """Request worker shutdown without waiting; follow with GUI-thread join()."""
         self._stop_event.set()
 
     def _release_surface(self) -> None:
@@ -137,11 +161,17 @@ class RenderThread(threading.Thread):
             self._surface = None
 
     def join(self, timeout=None) -> None:
+        """Wait for worker termination and release its surface on the GUI thread.
+
+        With a timeout, the surface remains alive while the worker is running.
+        Join again or call :meth:`close` before destroying the Qt application.
+        """
         super().join(timeout)
         if not self.is_alive():
             self._release_surface()
 
     def close(self) -> None:
+        """Stop, join, and destroy the offscreen surface on the GUI thread."""
         require_gui_thread()
         self.stop()
         if self.ident is not None:

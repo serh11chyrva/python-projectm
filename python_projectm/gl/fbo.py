@@ -88,7 +88,22 @@ class TextureFramebuffer(FBO):
 
     def read(self, *, flip_y: bool = True, out: np.ndarray | None = None,
              preserve_state: bool = True) -> np.ndarray:
-        """Return writable contiguous uint8 RGBA pixels; the default origin is top-left."""
+        """Read RGBA pixels with the creating thread and context current.
+
+        Args:
+            flip_y: Flip rows to a top-left origin. False retains OpenGL's
+                bottom-left origin.
+            out: Optional writable C-contiguous uint8 array of shape
+                ``(height, width, 4)``. Its storage is reused and returned.
+            preserve_state: Save and restore the OpenGL state used by readback.
+
+        Returns:
+            A writable C-contiguous RGBA uint8 array.
+
+        Raises:
+            ValueError: The supplied output array has incompatible storage.
+            RuntimeError: The framebuffer is already closed.
+        """
         self._check()
         shape = (self.height, self.width, 4)
         if out is None:
@@ -115,6 +130,11 @@ class TextureFramebuffer(FBO):
         return out
 
     def close(self) -> None:
+        """Delete the owned texture and FBO in their original context.
+
+        Repeated calls do nothing. Closing while entered as a binding context
+        manager raises RuntimeError; exit the binding scope first.
+        """
         if self._closed:
             return
         self._guard.check()

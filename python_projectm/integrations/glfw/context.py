@@ -63,17 +63,24 @@ class GLFWContext:
             raise RuntimeError("GLFW context adapter is closed")
 
     def make_current(self) -> None:
+        """Make this window's context current on the adapter's creating thread."""
         self._check()
         glfw.make_context_current(self.window)
         if _window_id(glfw.get_current_context()) != _window_id(self.window):
             raise RuntimeError("GLFW could not make the requested context current")
 
     def done_current(self) -> None:
+        """Clear GLFW's current context; use :meth:`current` to restore one."""
         self._check()
         glfw.make_context_current(None)
 
     @contextmanager
     def current(self):
+        """Activate this context and restore the preceding GLFW context on exit.
+
+        Release any non-GLFW context before entering this scope. The adapter
+        cannot restore a context supplied by a different toolkit.
+        """
         self._check()
         previous = glfw.get_current_context()
         if not previous and current_context_id():
@@ -87,11 +94,17 @@ class GLFWContext:
             glfw.make_context_current(previous)
 
     def get_size(self) -> tuple[int, int]:
+        """Return framebuffer dimensions in physical pixels on the main thread."""
         self._check()
         _main_thread()
         return tuple(glfw.get_framebuffer_size(self.window))
 
     def close(self) -> None:
+        """Close the adapter and destroy its owned window on the main thread.
+
+        Borrowed windows remain alive. Global GLFW state is never terminated.
+        Close renderers and other GL resources before closing their context.
+        """
         if self._closed:
             return
         self._check()

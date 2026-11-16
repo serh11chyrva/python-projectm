@@ -9,6 +9,12 @@ from python_projectm.integrations.pyside6.context import require_gui_thread
 
 
 class NumpyViewport(QWidget):
+    """Display detached RGBA frames on the Qt GUI thread.
+
+    ``keep_aspect=True`` letterboxes the image rather than stretching it to the
+    widget bounds. ``parent`` has the usual QWidget ownership semantics.
+    """
+
     def __init__(self, parent=None, *, keep_aspect: bool = False):
         super().__init__(parent)
         self._pixmap: QPixmap | None = None
@@ -16,6 +22,11 @@ class NumpyViewport(QWidget):
 
     @Slot(object)
     def set_frame(self, frame: np.ndarray) -> None:
+        """Copy a nonempty uint8 ``(height, width, 4)`` RGBA frame for display.
+
+        Call on the GUI thread, typically through a queued Qt signal. The
+        producer may immediately reuse its array after the frame is consumed.
+        """
         require_gui_thread()
         if (
             not isinstance(frame, np.ndarray) or frame.dtype != np.uint8
@@ -33,6 +44,7 @@ class NumpyViewport(QWidget):
         self.update()
 
     def paintEvent(self, event):
+        """Paint the latest frame, using black for the background and letterbox."""
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.GlobalColor.black)
         if self._pixmap is not None:

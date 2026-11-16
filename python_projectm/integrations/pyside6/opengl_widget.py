@@ -15,7 +15,22 @@ from python_projectm.integrations.pyside6.context import opengl_format, require_
 
 
 class ProjectMWidget(QOpenGLWidget):
-    """A GPU viewport; PCM and preset commands can also be submitted from workers."""
+    """Render projectM directly into Qt's OpenGL widget framebuffer.
+
+    Args:
+        parent: Optional Qt parent widget.
+        fps: Positive timer frame-rate target, also passed to projectM.
+        preset: Optional initial preset path, loaded after GL initialization.
+
+    Construct and access the widget on the GUI thread. Preset and PCM methods
+    queue commands and may also be called by workers. ``pm`` remains ``None``
+    until initialization; use :meth:`current` for direct core access afterward.
+
+    Signals:
+        initialized: Emitted after successful OpenGL initialization.
+        frame_rendered: Emitted after a rendered frame.
+        error: Emits an exception from initialization, rendering, or a command.
+    """
 
     initialized = Signal()
     frame_rendered = Signal()
@@ -44,6 +59,7 @@ class ProjectMWidget(QOpenGLWidget):
 
     @property
     def fps(self) -> int:
+        """Positive timer frame-rate target; update this property on the GUI thread."""
         return self._fps
 
     @fps.setter
@@ -55,6 +71,7 @@ class ProjectMWidget(QOpenGLWidget):
             self._timer.start(max(1, round(1000 / self._fps)))
 
     def initializeGL(self):
+        """Initialize projectM when Qt makes the widget's GL context current."""
         self._initialization_failed = False
         try:
             self._native_context = self.context()
@@ -81,6 +98,7 @@ class ProjectMWidget(QOpenGLWidget):
         return max(1, int(self.width() * ratio + 0.5)), max(1, int(self.height() * ratio + 0.5))
 
     def resizeGL(self, width, height):
+        """Update projectM to Qt's physical framebuffer size after a resize."""
         if self.pm is not None:
             try:
                 self.pm.set_size(*self._pixel_size())
@@ -88,6 +106,7 @@ class ProjectMWidget(QOpenGLWidget):
                 self.error.emit(error)
 
     def paintGL(self):
+        """Render into Qt's backing framebuffer and emit completion or error."""
         if self.pm is None and not self._initialization_failed:
             self.initializeGL()
         if self.pm is not None:
@@ -118,14 +137,17 @@ class ProjectMWidget(QOpenGLWidget):
         self.update()
 
     def load_preset_file(self, path, *, smooth: bool = True) -> None:
+        """Queue a preset path for the GUI thread, including before initialization."""
         self._command.emit(("load_preset_file", (path,), {"smooth": smooth}))
 
     load_preset = load_preset_file
 
     def load_preset_data(self, data: str, *, smooth: bool = True) -> None:
+        """Queue Milkdrop source text and an optional smooth transition."""
         self._command.emit(("load_preset_data", (data,), {"smooth": smooth}))
 
     def add_pcm(self, samples, channels: int | None = None) -> None:
+        """Copy PCM and queue it for the GUI thread; the producer may reuse its buffer."""
         self._command.emit(("add_pcm", (np.array(samples, copy=True, order="C"), channels), {}))
 
     @contextmanager
@@ -152,6 +174,11 @@ class ProjectMWidget(QOpenGLWidget):
 
     @Slot()
     def cleanup(self) -> None:
+        """Stop rendering and release projectM while the widget's context still exists.
+
+        Call on the GUI thread before explicit native widget deletion. Cleanup
+        is also connected to Qt context destruction and application shutdown.
+        """
         require_gui_thread()
         self._timer.stop()
         self._initialization_failed = False
@@ -170,10 +197,12 @@ class ProjectMWidget(QOpenGLWidget):
             self._native_context = None
 
     def closeEvent(self, event):
+        """Release projectM before forwarding Qt's widget close event."""
         self.cleanup()
         super().closeEvent(event)
 
     def event(self, event):
+        """Release GL resources before deferred deletion or a parent change."""
         if hasattr(self, "_timer") and event.type() in (
             QEvent.Type.DeferredDelete, QEvent.Type.ParentAboutToChange
         ):

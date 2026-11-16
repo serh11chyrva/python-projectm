@@ -6,6 +6,8 @@ from python_projectm.gl.context import ContextGuard
 
 
 class ViewportGuard:
+    """Restore the viewport on exit with the same thread and GL context current."""
+
     def __enter__(self):
         self._guard = ContextGuard()
         self._old = tuple(int(value) for value in GL.glGetIntegerv(GL.GL_VIEWPORT))

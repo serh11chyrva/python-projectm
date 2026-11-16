@@ -103,6 +103,7 @@ _vcs_string = _bind("pypm_get_vcs_version_string", restype=c_void_p)
 
 
 def check_error() -> None:
+    """Raise NativeError when the wrapper's thread-local error string is nonempty."""
     message = pypm_get_last_error()
     if message:
         raise NativeError(message.decode("utf-8", errors="replace"))
@@ -121,10 +122,12 @@ def _owned_string(function) -> bytes:
 
 
 def pypm_get_version_string() -> bytes:
+    """Copy the native version to bytes and free its projectM-allocated string."""
     return _owned_string(_version_string)
 
 
 def pypm_get_vcs_version_string() -> bytes:
+    """Copy the native VCS version to bytes and free its projectM-allocated string."""
     return _owned_string(_vcs_string)
 
 

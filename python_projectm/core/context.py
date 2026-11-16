@@ -15,7 +15,12 @@ from python_projectm.native.errors import NativeError
 
 
 class ProjectMCore:
-    """Create and use this object with the same desktop OpenGL context current."""
+    """Manage one projectM instance in the creating thread and OpenGL context.
+
+    The application owns the desktop OpenGL 3.3+ context. This base class exposes
+    sizing, rendering, and cleanup; use :class:`python_projectm.ProjectM` for
+    preset, parameter, and PCM methods as well.
+    """
 
     def __init__(self):
         self._alive = False
@@ -37,6 +42,7 @@ class ProjectMCore:
 
     @property
     def closed(self) -> bool:
+        """Whether the native instance has been destroyed."""
         return not self._alive
 
     def _check_alive(self) -> None:
@@ -86,16 +92,32 @@ class ProjectMCore:
                 )
 
     def set_size(self, width: int, height: int) -> None:
+        """Set the output size in physical pixels.
+
+        Both dimensions must be nonnegative integers. A zero dimension suspends
+        rendering without destroying the instance or its context.
+        """
         width, height = dimensions(width, height, allow_zero=True)
         self._call(native.pypm_set_window_size, width, height)
 
     def get_size(self) -> tuple[int, int]:
+        """Return the configured output ``(width, height)`` in physical pixels."""
         width, height = ctypes.c_size_t(), ctypes.c_size_t()
         self._call(native.pypm_get_window_size, ctypes.byref(width), ctypes.byref(height))
         return width.value, height.value
 
     def render(self, *, framebuffer: int | None = None, preserve_state: bool = True) -> None:
-        """Render into the current draw framebuffer or an explicit framebuffer ID."""
+        """Render one frame with the original OpenGL context current.
+
+        Args:
+            framebuffer: OpenGL framebuffer ID, or ``None`` to use the current
+                draw framebuffer. Zero selects the default framebuffer.
+            preserve_state: Save and restore the OpenGL state used by projectM.
+                Disable only when the application restores its own render state.
+
+        A zero output dimension skips the frame. This method does not swap
+        buffers, poll events, or pace the application's render loop.
+        """
         self._check_alive()
         if framebuffer is not None:
             framebuffer = integer(framebuffer, "framebuffer", minimum=0, maximum=2**32 - 1)
