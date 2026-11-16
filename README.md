@@ -3,6 +3,11 @@
 Python bindings for the projectM OpenGL music visualizer, with GLFW, ModernGL,
 PySide6, and NumPy integrations.
 
+The [documentation](docs/index.md) includes installation, a quick start,
+integration guides, and an API reference generated from source docstrings.
+See [maintaining documentation](docs/documentation.md) to build the Sphinx/Shibuya
+site locally and [publishing](docs/publishing.md) to connect Read the Docs.
+
 | Integration | Entry point | Output |
 | --- | --- | --- |
 | Core / existing OpenGL context | `python_projectm.ProjectM` | Current or explicit framebuffer |
@@ -47,6 +52,8 @@ also comply with the LGPL v2.1 terms, including the required copyright and licen
 a copy of the license, and the applicable requirements for providing corresponding source
 code and allowing users to use a modified version of the library. Refer to the upstream
 license for the full requirements.
+
+<!-- docs-installation-start -->
 
 ## Building from source on Windows (x64)
 
@@ -247,7 +254,11 @@ the current setuptools configuration does not automatically assign a Windows pla
 Do not publish its default `py3-none-any` wheel as a cross-platform package. Platform-specific
 wheel tagging and CI packaging remain separate work.
 
+<!-- docs-installation-end -->
+
 ## Troubleshooting
+
+<!-- docs-troubleshooting-start -->
 
 - **Missing `libprojectM-4.1.6/CMakeLists.txt`:** extract the release archive into the repository root.
 - **GLEW not found during configuration:** check `VCPKG_ROOT`, install `glew:x64-windows`,
@@ -256,3 +267,5 @@ wheel tagging and CI packaging remain separate work.
 - **DLL loading fails:** check that all three runtime DLLs are present, all binaries and Python are x64,
   and the [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
   is installed on the runtime machine.
+
+<!-- docs-troubleshooting-end -->

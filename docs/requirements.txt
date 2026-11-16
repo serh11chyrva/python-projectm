@@ -1,0 +1,6 @@
+# Documentation dependencies are separate from the application's uv lockfile.
+Sphinx==8.2.3
+shibuya==2026.7.12
+myst-parser==4.0.1
+# Autodoc uses real array types; GUI and OpenGL packages are mocked in conf.py.
+numpy==2.4.1
