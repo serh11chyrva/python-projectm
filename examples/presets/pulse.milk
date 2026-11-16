@@ -1,0 +1,19 @@
+MILKDROP_PRESET_VERSION=201
+PSVERSION_WARP=0
+PSVERSION_COMP=2
+[preset00]
+fRating=3
+fGammaAdj=1
+fDecay=0
+fWaveAlpha=0
+comp_1=`shader_body
+comp_2=`{
+comp_3=`float2 p = uv - 0.5;
+comp_4=`float radius = length(p);
+comp_5=`float angle = atan2(p.y, p.x);
+comp_6=`float beat = min(bass * 0.12, 0.6);
+comp_7=`float rings = 0.5 + 0.5 * sin(radius * 48.0 - time * 3.0 + sin(angle * 6.0 + time) * (1.0 + beat));
+comp_8=`float glow = rings * exp(-radius * 2.5);
+comp_9=`float3 tint = 0.55 + 0.45 * sin(float3(0.0, 2.1, 4.2) + time * 0.35 + radius * 5.0);
+comp_10=`ret = float3(0.015, 0.025, 0.06) + tint * glow * (0.5 + beat);
+comp_11=`}

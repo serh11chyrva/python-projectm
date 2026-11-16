@@ -242,4 +242,7 @@ wheelhouse/
 
 #
 /libprojectM-4.1.6
-/examples
+
+# Local presets and generated example output
+/examples/*.milk
+/examples/output/

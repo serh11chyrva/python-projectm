@@ -17,6 +17,9 @@ PCM formats, Qt background rendering, and resource ownership.
 See [tests/README.md](tests/README.md) for the standard-library unit suite and
 opt-in tests that render and inspect pixels with all four integrations.
 
+Runnable [examples](examples/README.md) include an original preset, synthetic or
+WAV PCM input, GLFW visualization, ModernGL texture composition, and NumPy frame export.
+
 NumPy output is read back into CPU memory after OpenGL rendering. projectM has no
 OpenGL-free CPU renderer; software rendering requires a compatible software OpenGL driver.
 
