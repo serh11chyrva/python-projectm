@@ -2,6 +2,26 @@
 
 Python bindings for the projectM OpenGL music visualizer, with an optional PySide6 integration.
 
+## Licensing
+
+`python-projectm` provides Python bindings for [projectM](https://github.com/projectM-visualizer/projectm).
+It is a binding project, not a fork of projectM.
+
+- The original code in this repository, including the Python bindings in `python_projectm/`
+  and the native C++ wrapper in `pypm_wrapper/`, is licensed under the **MIT License**.
+  See [LICENSE](LICENSE) for the full terms.
+- The **projectM library** is licensed separately under the **GNU Lesser General Public
+  License v2.1 (LGPL v2.1)**. See the
+  [upstream projectM license](https://github.com/projectM-visualizer/projectm/blob/v4.1.6/LICENSE.txt).
+  This repository's MIT License does not relicense projectM.
+- Other third-party dependencies retain their respective licenses.
+
+If you redistribute projectM binaries, including DLLs bundled in a Python wheel, you must
+also comply with the LGPL v2.1 terms, including the required copyright and license notices,
+a copy of the license, and the applicable requirements for providing corresponding source
+code and allowing users to use a modified version of the library. Refer to the upstream
+license for the full requirements.
+
 ## Building from source on Windows (x64)
 
 The instructions below use Visual Studio 2022, the Release configuration and 64-bit Python.
