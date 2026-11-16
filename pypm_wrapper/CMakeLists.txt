@@ -75,8 +75,15 @@ endif()
 
 set_target_properties(pypm_capi PROPERTIES
     OUTPUT_NAME "pypm_capi"
-    PREFIX ""
 )
+
+if(WIN32)
+    set_target_properties(pypm_capi PROPERTIES PREFIX "")
+elseif(UNIX AND NOT APPLE)
+    set_target_properties(pypm_capi PROPERTIES BUILD_RPATH "$ORIGIN")
+elseif(APPLE)
+    set_target_properties(pypm_capi PROPERTIES BUILD_RPATH "@loader_path")
+endif()
 
 # ------------------------------------------------------------
 # Install (optional, but nice)
@@ -91,6 +98,17 @@ install(TARGETS pypm_capi
 install(FILES include/pypm_capi.h
     DESTINATION include
 )
+
+if(NOT WIN32)
+    add_custom_command(TARGET pypm_capi POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPM_NATIVE_BIN_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:projectM>" "${PYPM_NATIVE_BIN_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_SONAME_FILE:projectM>" "${PYPM_NATIVE_BIN_DIR}"
+        VERBATIM
+    )
+endif()
 
 # POST_BUILD commands must be declared in the directory that owns the target.
 add_custom_command(TARGET pypm_capi POST_BUILD

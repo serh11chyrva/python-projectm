@@ -1,9 +1,12 @@
-from python_projectm.gl.fbo import FBO
-from python_projectm.gl.renderer import GLContext
-from python_projectm.gl.state import ViewportGuard
+from python_projectm.gl.fbo import FBO, TextureFramebuffer
+from python_projectm.gl.renderer import GLContext, Renderer
+from python_projectm.gl.state import GLStateGuard, ViewportGuard
 
 __all__ = [
     "GLContext",
     "FBO",
     "ViewportGuard",
+    "GLStateGuard",
+    "TextureFramebuffer",
+    "Renderer",
 ]

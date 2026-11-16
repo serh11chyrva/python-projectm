@@ -34,6 +34,8 @@ endif()
 
 add_subdirectory(libprojectM-4.1.6)
 
+include(cmake/ProjectMFramebuffer.cmake)
+
 if (NOT BUILD_SHARED_LIBS)
     message(FATAL_ERROR "python-projectm requires BUILD_SHARED_LIBS=ON.")
 endif()

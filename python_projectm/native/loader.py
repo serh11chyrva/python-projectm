@@ -1,99 +1,62 @@
-"""
-Native library loader for python-projectm.
-
-Loads pypm_capi shared library from the package's native/bin directory.
-
-This module is INTERNAL. Do not use it directly.
-"""
+"""Load the wrapper and retain Windows DLL search directories for its lifetime."""
 
 import ctypes
 import os
 import sys
-from typing import Final
+from functools import lru_cache
+from pathlib import Path
 
-try:
-    # Python 3.9+
-    from importlib.resources import files
-except ImportError:  # pragma: no cover
-    from importlib_resources import files  # type: ignore
+from python_projectm.native.errors import NativeError, NativeLibraryNotFound
 
+LIB_NAME = {
+    "win32": "pypm_capi.dll",
+    "darwin": "libpypm_capi.dylib",
+}.get(sys.platform, "libpypm_capi.so")
 
-if sys.platform == "win32":
-    LIB_NAME: Final[str] = "pypm_capi.dll"
-elif sys.platform == "darwin":
-    LIB_NAME = "libpypm_capi.dylib"
-else:
-    LIB_NAME = "libpypm_capi.so"
+_dll_directories: dict[str, object] = {}
 
 
-def _native_bin_dir():
-    return files("python_projectm.native").joinpath("bin")
+def _native_bin_dir() -> Path:
+    return Path(__file__).resolve().parent / "bin"
 
 
-def _load_dependencies_windows(bin_dir) -> None:
-    """
-    On Windows, ensure dependent DLLs are discoverable.
-
-    ctypes.CDLL accepts full paths, but dependent DLLs
-    must still be discoverable by the loader.
-    """
-    if sys.platform != "win32":
-        return
-
-    try:
-        os.add_dll_directory(str(bin_dir))
-    except (AttributeError, FileNotFoundError):
-        # AttributeError: Python < 3.8 (not supported anyway)
-        # FileNotFoundError: directory missing (handled later)
-        pass
+def _load_dependencies_windows(bin_dir: Path) -> None:
+    if sys.platform == "win32" and str(bin_dir) not in _dll_directories:
+        # Closing or discarding this handle removes the DLL search directory.
+        _dll_directories[str(bin_dir)] = os.add_dll_directory(str(bin_dir))
 
 
+@lru_cache(maxsize=1)
 def load_native_library() -> ctypes.CDLL:
-    bin_dir = _native_bin_dir()
-    lib = bin_dir.joinpath(LIB_NAME)
-
-    if not lib.exists():
-        raise RuntimeError(
-            "Native library not found.\n"
-            f"Expected: {lib}\n\n"
-            "This usually means:\n"
-            "- the package was installed without native binaries\n"
-            "- or the wheel is broken\n"
-            "- or you are running from a source checkout without building natives\n\n"
-            "If building manually, run CMake and ensure binaries are copied into:\n"
-            "  python_projectm/native/bin/"
+    """Load the packaged library, or the file selected by PYTHON_PROJECTM_LIBRARY."""
+    override = os.environ.get("PYTHON_PROJECTM_LIBRARY")
+    library = Path(override).expanduser().resolve() if override else _native_bin_dir() / LIB_NAME
+    if not library.is_file():
+        raise NativeLibraryNotFound(
+            f"Native library not found: {library}. Build the native wrapper as described in README.md."
         )
-
-    # Windows: ensure dependent DLLs are discoverable
-    _load_dependencies_windows(bin_dir)
-
     try:
-        return ctypes.CDLL(str(lib))
-    except OSError as exc:
-        raise RuntimeError(
-            "Failed to load native library.\n"
-            f"Path: {lib}\n"
-            f"Error: {exc}\n\n"
-            "Possible causes:\n"
-            "- missing dependent libraries (projectM, OpenGL, glew32, etc.)\n"
-            "- incompatible architecture (32/64 bit mismatch)\n"
-            "- incompatible C runtime\n"
-        ) from exc
+        _load_dependencies_windows(library.parent)
+        return ctypes.CDLL(str(library))
+    except OSError as error:
+        raise NativeError(
+            f"Cannot load {library}: {error}. Check the projectM runtime libraries, "
+            "the C++ runtime, and that Python and the native libraries use the same architecture."
+        ) from error
 
 
+@lru_cache(maxsize=1)
 def load_glew_library() -> ctypes.CDLL:
+    """Load GLEW for callers using the legacy helper; the wrapper initializes it."""
     if sys.platform != "win32":
-        raise RuntimeError("GLEW loader is Windows-only")
-
-    bin_dir = _native_bin_dir()
-    glew = bin_dir.joinpath("glew32.dll")
-
-    if not glew.exists():
-        raise RuntimeError(f"glew32.dll not found.\nExpected: {glew}")
-
+        raise NativeError("The standalone GLEW loader is Windows-only")
+    override = os.environ.get("PYTHON_PROJECTM_LIBRARY")
+    bin_dir = Path(override).expanduser().resolve().parent if override else _native_bin_dir()
+    library = bin_dir / "glew32.dll"
+    if not library.is_file():
+        raise NativeLibraryNotFound(f"GLEW library not found: {library}")
     _load_dependencies_windows(bin_dir)
-
-    return ctypes.WinDLL(str(glew))
+    return ctypes.WinDLL(str(library))
 
 
 __all__ = ["load_native_library", "load_glew_library"]

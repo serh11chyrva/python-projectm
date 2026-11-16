@@ -9,6 +9,8 @@ recursive-include pypm_wrapper *
 recursive-include libprojectM-4.1.6 *
 
 include CMakeLists.txt
+recursive-include cmake *.cmake
+recursive-include docs *.md
 
 global-exclude __pycache__
 global-exclude *.py[cod]

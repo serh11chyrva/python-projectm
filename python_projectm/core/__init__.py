@@ -1,6 +1,6 @@
 from python_projectm.core.audio import AudioMixin
 from python_projectm.core.context import ProjectMCore
-from python_projectm.core.errors import ProjectMError
+from python_projectm.core.errors import ProjectMContextError, ProjectMError, ProjectMNotInitialized
 from python_projectm.core.parameters import ParametersMixin
 from python_projectm.core.presets import PresetsMixin
 
@@ -15,4 +15,6 @@ __all__ = [
     "ProjectM",
     "ProjectMCore",
     "ProjectMError",
+    "ProjectMNotInitialized",
+    "ProjectMContextError",
 ]

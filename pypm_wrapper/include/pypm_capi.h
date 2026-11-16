@@ -30,6 +30,10 @@ typedef struct pypm_context pypm_context_t;
 PYPM_API pypm_context_t* pypm_create(void);
 PYPM_API void            pypm_destroy(pypm_context_t* ctx);
 
+/* Borrowed thread-local error string, valid until the next wrapper call. */
+PYPM_API const char* pypm_get_last_error(void);
+PYPM_API void pypm_clear_error(void);
+
 /* ============================================================
    Presets
    ============================================================ */
@@ -53,6 +57,7 @@ PYPM_API void pypm_reset_textures(pypm_context_t* ctx);
    ============================================================ */
 
 PYPM_API void pypm_render_frame(pypm_context_t* ctx);
+PYPM_API void pypm_render_frame_to_fbo(pypm_context_t* ctx, unsigned int framebuffer);
 PYPM_API void pypm_set_window_size(pypm_context_t* ctx, size_t w, size_t h);
 PYPM_API void pypm_get_window_size(pypm_context_t* ctx, size_t* w, size_t* h);
 
@@ -92,6 +97,14 @@ PYPM_API void pypm_get_mesh_size(pypm_context_t* ctx, size_t* w, size_t* h);
 PYPM_API void pypm_set_aspect_correction(pypm_context_t* ctx, int enabled);
 PYPM_API int  pypm_get_aspect_correction(pypm_context_t* ctx);
 
+PYPM_API void pypm_set_texture_search_paths(pypm_context_t* ctx, const char** paths, size_t count);
+PYPM_API void pypm_set_hard_cut_sensitivity(pypm_context_t* ctx, float value);
+PYPM_API float pypm_get_hard_cut_sensitivity(pypm_context_t* ctx);
+PYPM_API void pypm_set_preset_locked(pypm_context_t* ctx, int enabled);
+PYPM_API int pypm_get_preset_locked(pypm_context_t* ctx);
+PYPM_API void pypm_set_easter_egg(pypm_context_t* ctx, float value);
+PYPM_API float pypm_get_easter_egg(pypm_context_t* ctx);
+
 /* ============================================================
    Audio
    ============================================================ */
@@ -125,6 +138,8 @@ PYPM_API void pypm_pcm_add_uint8(
 
 PYPM_API char* pypm_get_version_string(void);
 PYPM_API char* pypm_get_vcs_version_string(void);
+/* Free only strings returned by the two version functions above. */
+PYPM_API void pypm_free_string(const char* value);
 
 #ifdef __cplusplus
 }

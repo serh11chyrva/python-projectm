@@ -1,11 +1,11 @@
-from typing import Protocol
+"""Typing contracts for the core mixins."""
 
-from python_projectm.native.bindings import ContextHandle
+from typing import Any, Callable, Protocol
 
 
 class HasContext(Protocol):
-    """
-    Typing-only protocol for classes that own a ProjectM native context.
-    """
+    _ctx: int | None
 
-    _ctx: ContextHandle
+    def _check_alive(self) -> None: ...
+
+    def _call(self, function: Callable[..., Any], *args, with_context: bool = True) -> Any: ...

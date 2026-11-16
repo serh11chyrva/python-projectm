@@ -1,6 +1,25 @@
 # python-projectm
 
-Python bindings for the projectM OpenGL music visualizer, with an optional PySide6 integration.
+Python bindings for the projectM OpenGL music visualizer, with GLFW, ModernGL,
+PySide6, and NumPy integrations.
+
+| Integration | Entry point | Output |
+| --- | --- | --- |
+| Core / existing OpenGL context | `python_projectm.ProjectM` | Current or explicit framebuffer |
+| GLFW | `python_projectm.integrations.glfw.GLFWRenderer` | Existing or owned GLFW window |
+| ModernGL | `python_projectm.integrations.moderngl.ModernGLRenderer` | ModernGL texture or application framebuffer |
+| PySide6 | `python_projectm.integrations.pyside6.ProjectMWidget` | GPU rendering in a `QOpenGLWidget` |
+| NumPy / CPU memory | `python_projectm.integrations.numpy.NumpyRenderer` | Writable RGBA `uint8` arrays |
+
+See [integration examples and lifecycle rules](docs/integrations.md) for all adapters,
+PCM formats, Qt background rendering, and resource ownership.
+
+NumPy output is read back into CPU memory after OpenGL rendering. projectM has no
+OpenGL-free CPU renderer; software rendering requires a compatible software OpenGL driver.
+
+Rebuild the native libraries after updating this implementation. The Python layer uses
+new wrapper symbols, and the root CMake build adds framebuffer support to projectM 4.1.6
+without changing the extracted upstream source tree or its C/C++ interfaces.
 
 ## Licensing
 
@@ -25,7 +44,7 @@ license for the full requirements.
 ## Building from source on Windows (x64)
 
 The instructions below use Visual Studio 2022, the Release configuration and 64-bit Python.
-The native wrapper currently includes Windows-specific code; Linux and macOS builds are not covered here.
+Linux and macOS builds are not covered by these installation instructions.
 Run the PowerShell commands from the repository root unless noted otherwise.
 
 ### Prerequisites
@@ -162,6 +181,11 @@ uv sync --locked --extra pyside6
 
 Use `--extra glfw` for GLFW, or `--all-extras` for both optional dependencies.
 
+The ModernGL adapter borrows a ModernGL context supplied by the application. It does not
+import ModernGL itself, install it, or create a second native context. Use the application's
+existing ModernGL installation. NumPy output can borrow a GLFW, ModernGL, Qt, or custom
+context adapter; creating a hidden GLFW context by default requires the `glfw` extra.
+
 uv reuses an existing compatible `.venv` in the repository root, including one created by Poetry;
 there is no need to delete it or run `uv venv`. If `.venv` does not exist, `uv sync` creates it.
 To keep both optional integrations and any additional installed packages when adopting uv, use:
@@ -175,6 +199,11 @@ By default, `uv sync` removes packages that are not selected for installation;
 
 `uv sync` installs the Python package and its Python dependencies; it does **not** run CMake.
 Build the native libraries first. Rebuild them after changing the C++ sources.
+
+Build through the root CMake project, including when rebuilding projectM: the framebuffer
+adaptation is compiled from a generated copy of `ProjectM.cpp` in the build directory.
+Using an unrelated prebuilt projectM 4.1.6 DLL would still force the final image into
+framebuffer zero and is not supported by the Qt/ModernGL/NumPy renderers.
 
 Manage dependencies with `uv add <package>` and `uv remove <package>`.
 After editing dependency declarations manually, run `uv lock` to update the lockfile.
