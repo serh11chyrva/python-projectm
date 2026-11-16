@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 
+# projectM's generated version header uses the top-level CMake project version.
 project(python_projectm_native
+    VERSION 4.1.6
     LANGUAGES C CXX
 )
 
