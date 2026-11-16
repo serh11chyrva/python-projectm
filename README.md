@@ -14,6 +14,9 @@ PySide6, and NumPy integrations.
 See [integration examples and lifecycle rules](docs/integrations.md) for all adapters,
 PCM formats, Qt background rendering, and resource ownership.
 
+See [tests/README.md](tests/README.md) for the standard-library unit suite and
+opt-in tests that render and inspect pixels with all four integrations.
+
 NumPy output is read back into CPU memory after OpenGL rendering. projectM has no
 OpenGL-free CPU renderer; software rendering requires a compatible software OpenGL driver.
 
