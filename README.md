@@ -180,6 +180,15 @@ Manage dependencies with `uv add <package>` and `uv remove <package>`.
 After editing dependency declarations manually, run `uv lock` to update the lockfile.
 Commit `pyproject.toml` and `uv.lock` together when dependencies change.
 
+The committed `requirements.txt` contains pinned Python dependencies, including both optional
+integrations, but excludes the local package itself. Regenerate it from the updated lockfile with:
+
+```powershell
+uv export --frozen --all-extras --no-emit-project --format requirements.txt --output-file requirements.txt
+```
+
+Include the regenerated `requirements.txt` in commits that update dependencies.
+
 ### 6. Verify the native library can load
 
 ```powershell
