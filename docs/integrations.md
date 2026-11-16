@@ -21,6 +21,7 @@ frame export, resize handling, error reporting, and explicit shutdown.
 | `ProjectMWidget` | ProjectM and repaint timer | Qt application and widget lifecycle |
 | `QtOffscreenContext` | Qt context and offscreen surface | Qt application |
 | `RenderThread` | Qt offscreen surface, worker context and NumPy renderer | GUI-thread creation, shutdown, and signal connections |
+| `ThreadedProjectMWidget` | Sharing worker, three GPU textures, GUI-local read FBO | GUI-thread widget creation and shutdown |
 
 ## Context and resource rules
 
@@ -241,6 +242,43 @@ render calls; use the inherited `frameSwapped` signal to count presentations.
 Only the `pyside6` optional dependency is needed for the Qt-native paths.
 Qt objects require an existing `QApplication` or `QGuiApplication`.
 
+### Shared-texture GPU worker
+
+Use `ThreadedProjectMWidget` when projectM rendering should run outside the GUI
+thread without transferring RGBA frames to CPU memory:
+
+```python
+from python_projectm.integrations.pyside6 import ThreadedProjectMWidget
+
+# Configure QSurfaceFormat and create QApplication as in the widget example below.
+widget = ThreadedProjectMWidget(fps=60, preset="preset.milk")
+widget.error.connect(lambda error: print(f"projectM: {error}"))
+widget.resize(960, 540)
+widget.show()
+# Producers may call widget.add_pcm(samples); close/cleanup on the GUI thread.
+```
+
+The worker owns projectM, its context, and three texture/FBO pairs. Qt presents
+the newest texture with a GPU framebuffer blit through a separate GUI-local FBO;
+FBO names are never shared across contexts. Producer and consumer fences are
+flushed before handoff, and GPU waits protect both reads and reuse. If every
+slot is still in flight, the worker skips that output opportunity instead of
+building an unbounded GPU backlog. A busy/hidden GUI has at most one outstanding
+frame notification, and obsolete ready frames may be replaced.
+
+The 128-command queue preserves PCM order and raises `queue.Full` when full.
+PCM is copied once into pooled native-dtype storage, which is reused only after
+consumption. Resize commands are coalesced; textures are replaced only after the
+previous GUI reads finish. The `fps` property updates worker pacing and projectM.
+This widget has no GUI-thread core access. Its `initialized` signal follows the
+first texture blit; `frameSwapped` measures presentations. `grabFramebuffer()`
+still reads pixels for an explicitly requested screenshot.
+
+Call `cleanup()` or close the widget before destroying Qt. Cleanup detaches the
+GUI FBO and joins the worker before releasing the sharing context. Qt context
+recreation restarts the worker and restores the last requested preset. Existing
+`ProjectMWidget`, `RenderThread`, and `NumpyViewport` APIs remain available.
+
 ### Direct GPU widget
 
 ```python
@@ -317,6 +355,11 @@ bounded to 128 items and raises `queue.Full` rather than blocking a producer.
 Command errors emit `emitter.error` and leave rendering active; initialization
 or frame failures stop the worker and are retained in `thread.error`.
 `emitter.finished` is emitted after worker cleanup.
+
+`RenderThread` keeps its private context current for the render loop and skips
+per-frame state snapshots. Submitted PCM is copied into reusable native-dtype
+buffers, which return to the pool after consumption. Call `set_fps(value)` to
+queue a change to both worker pacing and projectM's frame-rate setting.
 Connect frame signals to GUI-thread slots and keep consumers fast enough for
 the selected frame rate.
 

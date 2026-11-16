@@ -49,6 +49,13 @@ follow the PySide6 API. The GUI event callbacks are invoked by Qt.
 .. autoclass:: ProjectMWidget
    :members: fps, load_preset_file, load_preset, load_preset_data, add_pcm, current, cleanup
 
+.. autoclass:: ThreadedProjectMWidget
+   :members: fps, load_preset_file, load_preset, load_preset_data, add_pcm, cleanup
+
+   The native instance stays on the worker. This widget exposes queued commands
+   instead of a GUI-thread ``current()`` method. Its ``initialized``,
+   ``frame_rendered`` and ``error`` signals follow its class documentation.
+
 .. py:attribute:: ProjectMWidget.initialized
 
    No-argument Qt signal emitted after successful OpenGL initialization.
@@ -87,7 +94,7 @@ follow the PySide6 API. The GUI event callbacks are invoked by Qt.
    No-argument Qt signal emitted after the worker releases its GL resources.
 
 .. autoclass:: RenderThread
-   :members: load_preset, load_preset_file, load_preset_data, add_pcm, resize, stop, join, close
+   :members: load_preset, load_preset_file, load_preset_data, add_pcm, resize, set_fps, stop, join, close
 
 .. autoclass:: GLFWProjectMCPURenderer
 

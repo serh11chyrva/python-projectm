@@ -14,6 +14,7 @@ site locally and [publishing](docs/publishing.md) to connect Read the Docs.
 | GLFW | `python_projectm.integrations.glfw.GLFWRenderer` | Existing or owned GLFW window |
 | ModernGL | `python_projectm.integrations.moderngl.ModernGLRenderer` | ModernGL texture or application framebuffer |
 | PySide6 | `python_projectm.integrations.pyside6.ProjectMWidget` | GPU rendering in a `QOpenGLWidget` |
+| PySide6 worker | `python_projectm.integrations.pyside6.ThreadedProjectMWidget` | Worker rendering with shared GPU textures |
 | NumPy / CPU memory | `python_projectm.integrations.numpy.NumpyRenderer` | Writable RGBA `uint8` arrays |
 
 See [integration examples and lifecycle rules](docs/integrations.md) for all adapters,

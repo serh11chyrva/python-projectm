@@ -50,6 +50,9 @@ Generated images in `examples/output/` are ignored by Git.
 # Direct rendering into QOpenGLWidget's framebuffer (default).
 .venv/Scripts/python.exe -m examples.pyside6_visualizer --mode gpu
 
+# Render on a worker and present shared GPU textures without CPU frame copies.
+.venv/Scripts/python.exe -m examples.pyside6_visualizer --mode threaded --fps 60
+
 # Qt offscreen context on a render worker; RGBA frames arrive on the GUI thread.
 .venv/Scripts/python.exe -m examples.pyside6_visualizer --mode worker --fps 30
 
@@ -70,13 +73,19 @@ count received frames, which may be coalesced before painting. Rendering targets
 do not guarantee the same display rate. The GPU widget schedules against
 monotonic deadlines instead of rounding 60 FPS to a repeating 17 ms interval.
 
-Both modes use Qt-native contexts and need no GLFW or ModernGL installation.
+All modes use Qt-native contexts and need no GLFW or ModernGL installation.
 The surface format is selected before creating `QApplication`. GPU commands go
 through `ProjectMWidget`; the example never issues a core call from an audio
 producer. Worker mode submits preset, copied PCM, and debounced physical-pixel
 resize commands through `RenderThread`'s bounded queue. It drops a PCM block
 rather than blocking the GUI when that queue is full. `NumpyViewport` consumes
 frames on the GUI thread, and screenshots detach their `QImage` from NumPy memory.
+
+Threaded GPU mode uses `ThreadedProjectMWidget` with three shared textures and
+fences for producer/consumer ownership. The GUI blits the latest texture; it does
+not receive NumPy frames. Notifications are coalesced, in-flight GPU work is
+bounded by the texture slots, and PCM buffers are pooled until consumed. The
+original `worker` mode remains available for applications that need CPU frames.
 
 Closing the window or quitting the application stops the PCM timer first. GPU
 mode cleans up projectM while the widget context exists. Worker mode stops and

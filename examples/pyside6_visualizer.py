@@ -1,4 +1,4 @@
-"""An interactive Qt visualizer with direct GPU and background NumPy modes."""
+"""An interactive Qt visualizer with direct GPU, threaded GPU and NumPy modes."""
 
 import queue
 import sys
@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from python_projectm.integrations.pyside6 import (
-    FrameEmitter, NumpyViewport, ProjectMWidget, RenderThread,
+    FrameEmitter, NumpyViewport, ProjectMWidget, RenderThread, ThreadedProjectMWidget,
 )
 from python_projectm.integrations.pyside6.context import opengl_format
 
@@ -44,8 +44,8 @@ QStatusBar { color: #a5b2c7; background: #121c2b; }
 
 def build_parser():
     options = parser(__doc__)
-    options.add_argument("--mode", choices=("gpu", "worker"), default="gpu",
-                         help="Direct QOpenGLWidget or background rendering with CPU frame display")
+    options.add_argument("--mode", choices=("gpu", "threaded", "worker"), default="gpu",
+                         help="Direct GPU, shared-texture GPU worker, or CPU frame display")
     options.add_argument("--screenshot", type=Path, help="Save a PNG frame when --frames finishes")
     return options
 
@@ -99,8 +99,9 @@ class VisualizerWindow(QMainWindow):
         body.setSpacing(20)
         layout.addLayout(body, stretch=1)
 
-        if args.mode == "gpu":
-            self.viewport = ProjectMWidget(central, fps=args.fps)
+        if args.mode in ("gpu", "threaded"):
+            widget_type = ProjectMWidget if args.mode == "gpu" else ThreadedProjectMWidget
+            self.viewport = widget_type(central, fps=args.fps)
             self.viewport.initialized.connect(self._on_ready)
             self.viewport.frameSwapped.connect(self._count_frame)
             self.viewport.error.connect(self._on_error)
@@ -115,7 +116,8 @@ class VisualizerWindow(QMainWindow):
         controls.setSpacing(12)
         body.addWidget(panel)
 
-        mode = QLabel("DIRECT GPU" if args.mode == "gpu" else "BACKGROUND / NUMPY")
+        mode = QLabel({"gpu": "DIRECT GPU", "threaded": "THREADED / GPU TEXTURES",
+                       "worker": "BACKGROUND / NUMPY"}[args.mode])
         mode.setObjectName("eyebrow")
         controls.addWidget(mode)
         self.metrics = QLabel("Waiting for the first frame...")
@@ -253,7 +255,7 @@ class VisualizerWindow(QMainWindow):
 
     @Slot()
     def _count_frame(self):
-        if self._closing or self._finishing:
+        if self._closing or self._finishing or not self._ready:
             return
         self.frame_count += 1
         self._stats_frames += 1
@@ -265,7 +267,7 @@ class VisualizerWindow(QMainWindow):
                 ratio = self.viewport.devicePixelRatioF()
                 width = int(self.viewport.width() * ratio + 0.5)
                 height = int(self.viewport.height() * ratio + 0.5)
-            stage = "presented" if self.args.mode == "gpu" else "received"
+            stage = "received" if self.args.mode == "worker" else "presented"
             self.metrics.setText(f"{width} x {height} pixels\n{self._stats_frames / elapsed:.1f} FPS {stage} / {self.frame_count} frames")
             self._stats_time = time.monotonic()
             self._stats_frames = 0

@@ -4,14 +4,15 @@ import queue
 import threading
 import time
 
-import numpy as np
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QOffscreenSurface, QOpenGLContext
 from shiboken6 import delete
 
 from python_projectm.core.validation import dimensions, integer
+from python_projectm.gl.renderer import Renderer
 from python_projectm.integrations.numpy import NumpyRenderer
 from python_projectm.integrations.pyside6.context import QtGLContext, opengl_format, require_gui_thread
+from python_projectm.integrations.pyside6.pcm_queue import PCMBufferPool
 
 
 class FrameEmitter(QObject):
@@ -52,17 +53,32 @@ class RenderThread(threading.Thread):
         self.fps = integer(fps, "fps")
         self.delay = 1.0 / self.fps
         self.emitter = emitter
-        self.renderer: NumpyRenderer | None = None
+        self.renderer: Renderer | None = None
         self.error: Exception | None = None
         self._stop_event = threading.Event()
         self._commands = queue.Queue(maxsize=128)
+        self._pcm_buffers = PCMBufferPool()
         self._surface = QOffscreenSurface()
-        self._surface.setFormat(opengl_format())
+        self._surface.setFormat(self._surface_format())
         self._surface.create()
         if not self._surface.isValid():
             delete(self._surface)
             self._surface = None
             raise RuntimeError("Qt could not create the render thread's offscreen surface")
+
+    def _surface_format(self):
+        return opengl_format()
+
+    def _configure_context(self, context):
+        pass
+
+    def _create_renderer(self, adapter):
+        # This context belongs exclusively to the worker, so no caller GL state
+        # needs to be saved for each frame.
+        return NumpyRenderer(self.width, self.height, context=adapter, preserve_state=False)
+
+    def _emit_frame(self, renderer):
+        self.emitter.frame_ready.emit(renderer.render_frame())
 
     def _report_error(self, error: Exception) -> None:
         self.error = error
@@ -87,7 +103,16 @@ class RenderThread(threading.Thread):
 
     def add_pcm(self, samples, channels: int | None = None) -> None:
         """Copy PCM before enqueueing it so the caller may reuse its input buffer."""
-        self._enqueue("add_pcm", np.array(samples, copy=True, order="C"), channels)
+        buffer = self._pcm_buffers.copy(samples)
+        try:
+            self._enqueue("add_pcm", buffer, channels)
+        except Exception:
+            self._pcm_buffers.release(buffer)
+            raise
+
+    def set_fps(self, fps: int) -> None:
+        """Queue a positive frame-rate target for the worker and projectM."""
+        self._enqueue("__fps__", integer(fps, "fps"))
 
     def resize(self, width: int, height: int) -> None:
         """Queue positive output dimensions; allocate replacements on the worker."""
@@ -100,40 +125,21 @@ class RenderThread(threading.Thread):
         try:
             context = QOpenGLContext()
             context.setFormat(self._surface.format())
+            self._configure_context(context)
             if not context.create():
                 raise RuntimeError("Qt could not create the render thread's OpenGL context")
             adapter = QtGLContext(context, self._surface)
-            renderer = NumpyRenderer(self.width, self.height, context=adapter)
-            self.renderer = renderer
-            with renderer.current() as pm:
-                pm.fps = self.fps
-            next_frame = time.monotonic()
-            while not self._stop_event.is_set():
-                # Bound command work so producers cannot indefinitely delay rendering.
-                for _ in range(128):
-                    try:
-                        name, args, kwargs = self._commands.get_nowait()
-                    except queue.Empty:
-                        break
-                    try:
-                        getattr(renderer, name)(*args, **kwargs)
-                        if name == "resize":
-                            self.width, self.height = renderer.size
-                    except Exception as error:
-                        self._report_error(error)
-                if self._stop_event.is_set():
-                    break
-                self.emitter.frame_ready.emit(renderer.render_frame())
-                next_frame += self.delay
-                remaining = next_frame - time.monotonic()
-                if remaining < 0:
-                    next_frame = time.monotonic()
-                else:
-                    self._stop_event.wait(remaining)
+            with adapter.current():
+                renderer = self._create_renderer(adapter)
+                self.renderer = renderer
+                with renderer.current() as pm:
+                    pm.fps = self.fps
+                self._render_loop(renderer)
         except Exception as error:
             self._report_error(error)
         finally:
             self._stop_event.set()
+            self._discard_commands()
             try:
                 if renderer is not None:
                     renderer.close()
@@ -148,6 +154,51 @@ class RenderThread(threading.Thread):
                 signal = getattr(self.emitter, "finished", None)
                 if signal is not None:
                     signal.emit()
+
+    def _render_loop(self, renderer):
+        next_frame = time.monotonic()
+        while not self._stop_event.is_set():
+            # Bound command work so producers cannot indefinitely delay rendering.
+            for _ in range(128):
+                try:
+                    name, args, kwargs = self._commands.get_nowait()
+                except queue.Empty:
+                    break
+                try:
+                    if name == "__fps__":
+                        with renderer.current() as pm:
+                            pm.fps = args[0]
+                        self.fps = args[0]
+                        self.delay = 1.0 / self.fps
+                        next_frame = time.monotonic()
+                    else:
+                        getattr(renderer, name)(*args, **kwargs)
+                        if name == "resize":
+                            self.width, self.height = renderer.size
+                except Exception as error:
+                    self._report_error(error)
+                finally:
+                    if name == "add_pcm":
+                        self._pcm_buffers.release(args[0])
+            if self._stop_event.is_set():
+                break
+            self._emit_frame(renderer)
+            next_frame += self.delay
+            remaining = next_frame - time.monotonic()
+            if remaining < 0:
+                next_frame = time.monotonic()
+            else:
+                self._stop_event.wait(remaining)
+
+    def _discard_commands(self):
+        while True:
+            try:
+                name, args, _ = self._commands.get_nowait()
+            except queue.Empty:
+                break
+            if name == "add_pcm":
+                self._pcm_buffers.release(args[0])
+        self._pcm_buffers.clear()
 
     def stop(self) -> None:
         """Request worker shutdown without waiting; follow with GUI-thread join()."""
@@ -178,3 +229,4 @@ class RenderThread(threading.Thread):
             self.join()
         else:
             self._release_surface()
+        self._discard_commands()
