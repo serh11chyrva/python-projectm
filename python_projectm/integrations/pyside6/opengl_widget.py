@@ -77,7 +77,8 @@ class ProjectMWidget(QOpenGLWidget):
 
     def _pixel_size(self) -> tuple[int, int]:
         ratio = self.devicePixelRatioF()
-        return max(1, round(self.width() * ratio)), max(1, round(self.height() * ratio))
+        # Qt rounds positive half-pixels up; Python's round() rounds ties to even.
+        return max(1, int(self.width() * ratio + 0.5)), max(1, int(self.height() * ratio + 0.5))
 
     def resizeGL(self, width, height):
         if self.pm is not None:
