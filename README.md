@@ -31,7 +31,8 @@ Run the PowerShell commands from the repository root unless noted otherwise.
 ### Prerequisites
 
 - Git.
-- Python 3.11–3.14, 64-bit (the commands below use Python 3.11).
+- Python 3.11–3.14, 64-bit.
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), available on `PATH`.
 - Visual Studio 2022 or Build Tools 2022 with **Desktop development with C++**, MSVC v143 and a Windows SDK.
 - CMake **3.21 or newer**, available on `PATH`.
 - [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started) installed and bootstrapped.
@@ -147,25 +148,42 @@ The old `libprojectM-4.1.6/build/` directory is not used by these commands.
 
 ### 5. Install the Python package
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -e .
-```
-
-For the optional PySide6 integration, replace the last command with:
+Use the committed `uv.lock` to install the package in editable mode and its Python dependencies:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -e '.[pyside6]'
+uv sync --locked
 ```
 
-`pip install` installs the Python package and its Python dependencies; it does **not** run CMake.
+For the optional PySide6 integration, use:
+
+```powershell
+uv sync --locked --extra pyside6
+```
+
+Use `--extra glfw` for GLFW, or `--all-extras` for both optional dependencies.
+
+uv reuses an existing compatible `.venv` in the repository root, including one created by Poetry;
+there is no need to delete it or run `uv venv`. If `.venv` does not exist, `uv sync` creates it.
+To keep both optional integrations and any additional installed packages when adopting uv, use:
+
+```powershell
+uv sync --locked --all-extras --inexact
+```
+
+By default, `uv sync` removes packages that are not selected for installation;
+`--inexact` retains them. See [uv's syncing documentation](https://docs.astral.sh/uv/concepts/projects/sync/).
+
+`uv sync` installs the Python package and its Python dependencies; it does **not** run CMake.
 Build the native libraries first. Rebuild them after changing the C++ sources.
+
+Manage dependencies with `uv add <package>` and `uv remove <package>`.
+After editing dependency declarations manually, run `uv lock` to update the lockfile.
+Commit `pyproject.toml` and `uv.lock` together when dependencies change.
 
 ### 6. Verify the native library can load
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from python_projectm.core.version import get_version_string; print(get_version_string())"
+uv run --locked python -c "from python_projectm.core.version import get_version_string; print(get_version_string())"
 ```
 
 The output should identify projectM 4.1.6. This checks DLL loading and the version API;
@@ -176,8 +194,7 @@ rendering additionally requires an active OpenGL context and a preset.
 After building the native libraries, create a wheel containing the DLLs:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install build
-.\.venv\Scripts\python.exe -m build --wheel
+uv build --wheel
 ```
 
 Wheels are written to `dist/`. This manual process bundles Windows x64 DLLs;
