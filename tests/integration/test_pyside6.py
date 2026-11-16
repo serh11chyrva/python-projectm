@@ -14,8 +14,8 @@ from tests.integration.support import (
 
 require_gl_tests("PySide6")
 
-from PySide6.QtCore import QObject, QThread, Slot
-from PySide6.QtGui import QSurfaceFormat
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QThread, Slot
+from PySide6.QtGui import QOpenGLContext, QSurfaceFormat
 from PySide6.QtWidgets import QApplication
 
 from python_projectm.integrations.numpy import NumpyRenderer
@@ -54,6 +54,17 @@ class PySide6Tests(unittest.TestCase):
             QSurfaceFormat.setDefaultFormat(opengl_format())
         cls.app = QApplication.instance() or QApplication([])
         cls.app.setQuitOnLastWindowClosed(False)
+
+    def setUp(self):
+        # Run after each test's widget close/delete callbacks, before another GL context is created.
+        self.addCleanup(self.release_qt_events)
+
+    def release_qt_events(self):
+        context = QOpenGLContext.currentContext()
+        if context is not None:
+            context.doneCurrent()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.app.processEvents()
 
     def widget(self):
         widget = ProjectMWidget(fps=30)
@@ -168,3 +179,46 @@ class PySide6Tests(unittest.TestCase):
         worker.close()
         with self.assertRaises(RuntimeError):
             worker.resize(64, 64)
+
+    def exercise_example(self, mode):
+        from examples._common import DEMO_PRESET
+        from examples.pyside6_visualizer import VisualizerWindow, build_parser
+
+        args = build_parser().parse_args(["--mode", mode, "--width", "320", "--height", "180"])
+        window = VisualizerWindow(args)
+        try:
+            window.show()
+            wait_until(self.app, lambda: window.frame_count >= 2)
+            self.assertEqual(window.error_label.text(), "")
+            window.pause_button.click()
+            self.assertTrue(window.pause_button.isChecked())
+            window.gain_slider.setValue(20)
+            window.use_demo_audio()
+            self.assertIn("Synthetic stereo", window.audio_label.text())
+            with tempfile.TemporaryDirectory() as directory:
+                snapshot = Path(directory) / "frame.png"
+                window.save_frame(snapshot)
+                from PySide6.QtGui import QImage
+
+                image = QImage(str(snapshot))
+                self.assertFalse(image.isNull())
+                self.assertGreater(float(image_array(image)[:, :, :3].std()), 5.0)
+                window.load_preset_path(Path(directory) / "missing.milk", smooth=False)
+                wait_until(self.app, lambda: bool(window.error_label.text()))
+                window.load_preset_path(DEMO_PRESET, smooth=False)
+                count = window.frame_count
+                wait_until(self.app, lambda: window.frame_count > count)
+                self.assertEqual(window.error_label.text(), "")
+        finally:
+            window.close()
+            window.deleteLater()
+        if window.worker is not None:
+            self.assertFalse(window.worker.is_alive())
+        else:
+            self.assertIsNone(window.viewport.pm)
+
+    def test_gpu_example_controls_snapshot_and_error_recovery(self):
+        self.exercise_example("gpu")
+
+    def test_worker_example_controls_snapshot_and_error_recovery(self):
+        self.exercise_example("worker")

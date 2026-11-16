@@ -10,11 +10,13 @@ No preset download, texture pack, audio device, or image-writing package is need
 | GLFW | `examples.glfw_visualizer` | Package's `glfw` extra | Resizable window; Escape closes it |
 | NumPy | `examples.numpy_frames` | Package's `glfw` extra | Reused RGBA array and a final PPM image |
 | ModernGL | `examples.moderngl_texture` | Application's `moderngl` installation | GPU texture consumed by a second shader, then a final PPM image |
+| PySide6 | `examples.pyside6_visualizer` | Package's `pyside6` extra | Interactive GPU widget or background Qt/NumPy rendering |
 
 ```powershell
 .venv/Scripts/python.exe -m examples.glfw_visualizer
 .venv/Scripts/python.exe -m examples.numpy_frames --frames 120
 .venv/Scripts/python.exe -m examples.moderngl_texture --frames 120
+.venv/Scripts/python.exe -m examples.pyside6_visualizer
 ```
 
 The ModernGL example does not need GLFW. It creates a standalone desktop OpenGL
@@ -41,3 +43,42 @@ it shares the repository's MIT license. Other presets may have their own license
 and texture requirements. Presets placed directly in `examples/` remain local;
 the `examples/presets/` directory contains the versioned demonstration preset.
 Generated images in `examples/output/` are ignored by Git.
+
+## PySide6 studio
+
+```powershell
+# Direct rendering into QOpenGLWidget's framebuffer (default).
+.venv/Scripts/python.exe -m examples.pyside6_visualizer --mode gpu
+
+# Qt offscreen context on a render worker; RGBA frames arrive on the GUI thread.
+.venv/Scripts/python.exe -m examples.pyside6_visualizer --mode worker --fps 30
+
+# A finite run with a PNG snapshot and a nonzero exit code on errors.
+.venv/Scripts/python.exe -m examples.pyside6_visualizer --frames 60 --screenshot examples/output/qt.png
+```
+
+The window provides preset selection, smooth transitions, looping PCM WAV input,
+a synthetic stereo source, input gain, PCM pause/resume, a PNG frame exporter,
+rendering statistics, and visible nonmodal error messages. Space toggles PCM
+pause, Ctrl+O opens a preset, Ctrl+Shift+O opens WAV, Ctrl+S saves a frame, and
+Escape closes the window. Pausing feeds silence and retains the source position;
+the visualization itself continues animating. The frame-rate target is chosen
+with `--fps` at launch.
+
+Both modes use Qt-native contexts and need no GLFW or ModernGL installation.
+The surface format is selected before creating `QApplication`. GPU commands go
+through `ProjectMWidget`; the example never issues a core call from an audio
+producer. Worker mode submits preset, copied PCM, and debounced physical-pixel
+resize commands through `RenderThread`'s bounded queue. It drops a PCM block
+rather than blocking the GUI when that queue is full. `NumpyViewport` consumes
+frames on the GUI thread, and screenshots detach their `QImage` from NumPy memory.
+
+Closing the window or quitting the application stops the PCM timer first. GPU
+mode cleans up projectM while the widget context exists. Worker mode stops and
+joins the render thread before destroying the GUI-owned offscreen surface. A
+15-second startup watchdog reports context initialization failures. Finite runs
+also close with an error status when a preset, render, or snapshot operation fails.
+Ordinary interactive runs keep the window open so a bad input can be replaced.
+
+The lifecycle follows the [Qt OpenGL widget documentation](https://doc.qt.io/qtforpython-6/PySide6/QtOpenGLWidgets/QOpenGLWidget.html).
+For the adapter API and context ownership rules, see [docs/integrations.md](../docs/integrations.md).

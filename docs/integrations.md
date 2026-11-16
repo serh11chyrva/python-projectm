@@ -5,6 +5,12 @@ together through the root CMake project; see [README.md](../README.md) for
 installation and build instructions. Native loading is deferred until the first
 native call, so importing an adapter does not load the native wrapper library.
 
+The [runnable examples](../examples/README.md) cover all four integrations with
+an original preset and synthetic or WAV PCM. In particular,
+[`pyside6_visualizer.py`](../examples/pyside6_visualizer.py) demonstrates both the
+direct GPU widget and background Qt/NumPy rendering, with interactive controls,
+frame export, resize handling, error reporting, and explicit shutdown.
+
 | Adapter | Owns | Application retains ownership of |
 | --- | --- | --- |
 | `ProjectM` | Native projectM instance | Current GL context |

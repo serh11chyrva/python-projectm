@@ -18,7 +18,8 @@ See [tests/README.md](tests/README.md) for the standard-library unit suite and
 opt-in tests that render and inspect pixels with all four integrations.
 
 Runnable [examples](examples/README.md) include an original preset, synthetic or
-WAV PCM input, GLFW visualization, ModernGL texture composition, and NumPy frame export.
+WAV PCM input, GLFW visualization, ModernGL texture composition, NumPy frame export,
+and an interactive PySide6 studio with GPU and background rendering modes.
 
 NumPy output is read back into CPU memory after OpenGL rendering. projectM has no
 OpenGL-free CPU renderer; software rendering requires a compatible software OpenGL driver.

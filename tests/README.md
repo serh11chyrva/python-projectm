@@ -12,7 +12,9 @@ in [README.md](../README.md). These commands never install or synchronize packag
 
 The default run covers PCM layouts, dtype dispatch, native block sizes, argument
 validation, lazy ctypes symbols, and allocated string ownership. It does not
-load a DLL or create a GL context. The three OpenGL test modules are skipped.
+load a DLL or create a GL context. It also checks the examples' synthetic PCM,
+streaming WAV conversion/looping, and truncated-file handling. The three OpenGL
+test modules are skipped.
 
 ## Real rendering tests
 
@@ -40,6 +42,8 @@ core parameters and all PCM formats, GL state and thread/context ownership,
 preset failure recovery, NumPy output reuse and orientation, ModernGL external
 resource ownership, Qt queued PCM, widget resize/cleanup, offscreen rendering,
 and background rendering with GUI-thread frame delivery and orderly shutdown.
+The PySide6 studio is exercised in both modes, including controls, PNG snapshots,
+and recovery from invalid preset input.
 
 To select only one adapter:
 
