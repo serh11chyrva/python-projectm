@@ -44,17 +44,22 @@ class AudioMixin:
     """
 
     def pcm_max_samples(self: HasContext) -> int:
-        """Return the native maximum frames per channel in a single PCM call."""
-        return int(self._call(native.pypm_pcm_get_max_samples, with_context=False))
+        """Return and cache the native maximum frames per channel in one call."""
+        self._check_alive()
+        maximum = getattr(self, "_pcm_limit", None)
+        if maximum is None:
+            maximum = int(self._call(native.pypm_pcm_get_max_samples, with_context=False))
+            if maximum <= 0:
+                raise ProjectMError("The native PCM sample limit is invalid")
+            self._pcm_limit = maximum
+        return maximum
 
     def _add_pcm(self: HasContext, samples, channels, dtype, ctype, function) -> None:
         self._check_alive()
         data, channels = prepare_pcm(samples, channels, dtype)
         if not len(data):
             return
-        maximum = int(self._call(native.pypm_pcm_get_max_samples, with_context=False))
-        if maximum <= 0:
-            raise ProjectMError("The native PCM sample limit is invalid")
+        maximum = self.pcm_max_samples()
         # Native counts are frames per channel, never the number of scalar values.
         for offset in range(0, len(data), maximum):
             block = data[offset:offset + maximum]

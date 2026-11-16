@@ -1,6 +1,6 @@
 """A QOpenGLWidget that renders projectM directly into Qt's backing framebuffer."""
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 
 import numpy as np
 from PySide6.QtCore import QEvent, QTimer, Signal, Slot
@@ -125,7 +125,9 @@ class ProjectMWidget(QOpenGLWidget):
             return
         name, args, kwargs = command
         try:
-            with self.current(), GLStateGuard():
+            # PCM and FPS updates do not modify OpenGL state.
+            guard = nullcontext() if name in ("add_pcm", "__fps__") else GLStateGuard()
+            with self.current(), guard:
                 if name == "__fps__":
                     self.pm.fps = args[0]
                 else:
@@ -134,7 +136,8 @@ class ProjectMWidget(QOpenGLWidget):
                         self._preset = command
         except Exception as error:
             self.error.emit(error)
-        self.update()
+        if name != "add_pcm":
+            self.update()
 
     def load_preset_file(self, path, *, smooth: bool = True) -> None:
         """Queue a preset path for the GUI thread, including before initialization."""

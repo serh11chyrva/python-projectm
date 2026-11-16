@@ -220,6 +220,11 @@ and `get_size()`; it may provide a restoring `current()` context manager.
 
 ## PySide6
 
+PCM submission keeps the owning context current without saving or changing GL
+state. Audio commands do not request extra repaints; the rendering scheduler
+controls animation independently of the audio producer. The native PCM block
+limit is cached per projectM instance after its first successful query.
+
 Only the `pyside6` optional dependency is needed for the Qt-native paths.
 Qt objects require an existing `QApplication` or `QGuiApplication`.
 
