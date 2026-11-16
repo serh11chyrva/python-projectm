@@ -1,1 +1,176 @@
 # python-projectm
+
+Python bindings for the projectM OpenGL music visualizer, with an optional PySide6 integration.
+
+## Building from source on Windows (x64)
+
+The instructions below use Visual Studio 2022, the Release configuration and 64-bit Python.
+The native wrapper currently includes Windows-specific code; Linux and macOS builds are not covered here.
+Run the PowerShell commands from the repository root unless noted otherwise.
+
+### Prerequisites
+
+- Git.
+- Python 3.11–3.14, 64-bit (the commands below use Python 3.11).
+- Visual Studio 2022 or Build Tools 2022 with **Desktop development with C++**, MSVC v143 and a Windows SDK.
+- CMake **3.21 or newer**, available on `PATH`.
+- [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started) installed and bootstrapped.
+- An OpenGL-capable graphics driver for rendering.
+
+Python, projectM, GLEW and the wrapper must all use the same architecture.
+
+### 1. Get the repository
+
+```powershell
+git clone https://github.com/serh11chyrva/python-projectm.git
+cd python-projectm
+```
+
+For an existing checkout, use its root directory instead.
+No Git submodule initialization is required.
+
+### 2. Download and extract projectM 4.1.6
+
+Use the **libprojectM-4.1.6.tar.gz** asset attached to the
+[projectM v4.1.6 release](https://github.com/projectM-visualizer/projectm/releases/tag/v4.1.6).
+This is a source archive, so projectM must still be compiled.
+Use this release asset rather than GitHub's automatically generated `Source code` archives:
+the release archive includes the bundled dependencies needed for this build.
+
+Download, check the release asset's SHA-256 and extract it:
+
+```powershell
+$archive = Join-Path $env:TEMP 'libprojectM-4.1.6.tar.gz'
+Invoke-WebRequest `
+    -Uri 'https://github.com/projectM-visualizer/projectm/releases/download/v4.1.6/libprojectM-4.1.6.tar.gz' `
+    -OutFile $archive
+$expectedSha256 = '1b9e6d56c59fe24e5416da4d42e941a34c982811003e43ac88b5aca8afa52c87'
+if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $expectedSha256) {
+    throw 'projectM archive SHA-256 mismatch; do not extract it.'
+}
+if (Test-Path -LiteralPath './libprojectM-4.1.6') {
+    throw 'libprojectM-4.1.6 already exists. Use it, or move it aside before extracting.'
+}
+tar -xzf $archive
+if ($LASTEXITCODE -ne 0) { throw 'projectM extraction failed.' }
+```
+
+If the archive has already been downloaded and extracted, skip this step.
+The source tree must look like this (avoid an extra nested directory):
+
+```text
+python-projectm/
+├── CMakeLists.txt
+├── pyproject.toml
+├── libprojectM-4.1.6/
+│   ├── CMakeLists.txt
+│   ├── src/
+│   └── vendor/
+├── pypm_wrapper/
+│   └── CMakeLists.txt
+└── python_projectm/
+    └── native/
+        └── bin/
+```
+
+`libprojectM-4.1.6/` and compiled binaries are excluded from Git.
+A fresh checkout needs this download step again.
+
+### 3. Install GLEW with vcpkg
+
+Set the path to your existing vcpkg installation, then install the shared x64 Windows package:
+
+```powershell
+$env:VCPKG_ROOT = 'C:\dev\vcpkg' # Replace with your vcpkg installation directory.
+& "$env:VCPKG_ROOT/vcpkg.exe" install glew:x64-windows
+if ($LASTEXITCODE -ne 0) { throw 'GLEW installation failed.' }
+```
+
+The CMake command below uses vcpkg in classic mode to find this package.
+GLM and projectM-eval are built from the release archive's bundled sources;
+SDL, playlist support and upstream tests are disabled for this wrapper build.
+See [vcpkg's CMake integration documentation](https://learn.microsoft.com/en-us/vcpkg/users/buildsystems/cmake-integration)
+for the toolchain and classic-mode settings.
+
+### 4. Build projectM and the wrapper
+
+Configure and build both native libraries through the root `CMakeLists.txt`:
+
+```powershell
+cmake -S . -B build/native -G "Visual Studio 17 2022" -A x64 `
+    "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+    -DVCPKG_MANIFEST_MODE=OFF `
+    -DVCPKG_TARGET_TRIPLET=x64-windows `
+    -DBUILD_SHARED_LIBS=ON `
+    -DENABLE_SYSTEM_GLM=OFF `
+    -DENABLE_SYSTEM_PROJECTM_EVAL=OFF `
+    -DENABLE_PLAYLIST=OFF `
+    -DENABLE_SDL_UI=OFF `
+    -DBUILD_TESTING=OFF
+if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
+
+cmake --build build/native --config Release --target pypm_capi --parallel
+if ($LASTEXITCODE -ne 0) { throw 'Native build failed.' }
+```
+
+There is no separate projectM build or system-wide installation step.
+Linking through CMake targets builds projectM before the wrapper and uses the generated headers
+from this build directory. After a successful build, CMake copies these runtime libraries into
+`python_projectm/native/bin/`:
+
+- `pypm_capi.dll` — the Python-facing C wrapper.
+- `projectM-4.dll` — projectM.
+- `glew32.dll` — GLEW, copied as a runtime dependency.
+
+Use a fresh build directory when changing the generator, architecture or vcpkg toolchain.
+The old `libprojectM-4.1.6/build/` directory is not used by these commands.
+
+### 5. Install the Python package
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+For the optional PySide6 integration, replace the last command with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e '.[pyside6]'
+```
+
+`pip install` installs the Python package and its Python dependencies; it does **not** run CMake.
+Build the native libraries first. Rebuild them after changing the C++ sources.
+
+### 6. Verify the native library can load
+
+```powershell
+.\.venv\Scripts\python.exe -c "from python_projectm.core.version import get_version_string; print(get_version_string())"
+```
+
+The output should identify projectM 4.1.6. This checks DLL loading and the version API;
+rendering additionally requires an active OpenGL context and a preset.
+
+### Optional: build a wheel
+
+After building the native libraries, create a wheel containing the DLLs:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install build
+.\.venv\Scripts\python.exe -m build --wheel
+```
+
+Wheels are written to `dist/`. This manual process bundles Windows x64 DLLs;
+the current setuptools configuration does not automatically assign a Windows platform tag.
+Do not publish its default `py3-none-any` wheel as a cross-platform package. Platform-specific
+wheel tagging and CI packaging remain separate work.
+
+## Troubleshooting
+
+- **Missing `libprojectM-4.1.6/CMakeLists.txt`:** extract the release archive into the repository root.
+- **GLEW not found during configuration:** check `VCPKG_ROOT`, install `glew:x64-windows`,
+  and configure a fresh build directory using the toolchain above.
+- **Missing `pypm_capi.dll`:** build the `pypm_capi` target and check `python_projectm/native/bin/`.
+- **DLL loading fails:** check that all three runtime DLLs are present, all binaries and Python are x64,
+  and the [Microsoft Visual C++ x64 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+  is installed on the runtime machine.

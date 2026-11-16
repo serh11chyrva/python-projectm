@@ -47,4 +47,4 @@ include = ["python_projectm", "python_projectm.*"]
 
 
 [tool.setuptools.package-data]
-python_projectm = ["*.dll", "*.so", "*.dylib"]
+python_projectm = ["native/bin/*.dll", "native/bin/*.so", "native/bin/*.dylib"]
