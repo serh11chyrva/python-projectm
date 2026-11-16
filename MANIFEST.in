@@ -1,6 +1,7 @@
 include README.md
 include LICENSE
 include pyproject.toml
+include .readthedocs.yaml
 
 recursive-include python_projectm *.py
 recursive-include python_projectm *.dll *.so *.dylib
@@ -10,7 +11,8 @@ recursive-include libprojectM-4.1.6 *
 
 include CMakeLists.txt
 recursive-include cmake *.cmake
-recursive-include docs *.md
+recursive-include docs *.md *.rst *.py *.txt
+prune docs/_build
 
 global-exclude __pycache__
 global-exclude *.py[cod]
