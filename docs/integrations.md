@@ -233,6 +233,11 @@ state. Audio commands do not request extra repaints; the rendering scheduler
 controls animation independently of the audio producer. The native PCM block
 limit is cached per projectM instance after its first successful query.
 
+`ProjectMWidget` schedules single-shot precise timers against monotonic frame
+deadlines after Qt's `frameSwapped` signal. The target is subject to the display's
+refresh rate, composition, and rendering cost. `frame_rendered` reports completed
+render calls; use the inherited `frameSwapped` signal to count presentations.
+
 Only the `pyside6` optional dependency is needed for the Qt-native paths.
 Qt objects require an existing `QApplication` or `QGuiApplication`.
 

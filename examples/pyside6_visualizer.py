@@ -102,7 +102,7 @@ class VisualizerWindow(QMainWindow):
         if args.mode == "gpu":
             self.viewport = ProjectMWidget(central, fps=args.fps)
             self.viewport.initialized.connect(self._on_ready)
-            self.viewport.frame_rendered.connect(self._count_frame)
+            self.viewport.frameSwapped.connect(self._count_frame)
             self.viewport.error.connect(self._on_error)
         else:
             self.viewport = NumpyViewport(central, keep_aspect=True)
@@ -265,7 +265,8 @@ class VisualizerWindow(QMainWindow):
                 ratio = self.viewport.devicePixelRatioF()
                 width = int(self.viewport.width() * ratio + 0.5)
                 height = int(self.viewport.height() * ratio + 0.5)
-            self.metrics.setText(f"{width} x {height} pixels\n{self._stats_frames / elapsed:.1f} FPS / {self.frame_count} frames")
+            stage = "presented" if self.args.mode == "gpu" else "received"
+            self.metrics.setText(f"{width} x {height} pixels\n{self._stats_frames / elapsed:.1f} FPS {stage} / {self.frame_count} frames")
             self._stats_time = time.monotonic()
             self._stats_frames = 0
         if self.args.frames and self.frame_count >= self.args.frames:

@@ -1,9 +1,10 @@
 """A QOpenGLWidget that renders projectM directly into Qt's backing framebuffer."""
 
 from contextlib import contextmanager, nullcontext
+import time
 
 import numpy as np
-from PySide6.QtCore import QEvent, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QOpenGLContext
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import QApplication
@@ -19,7 +20,7 @@ class ProjectMWidget(QOpenGLWidget):
 
     Args:
         parent: Optional Qt parent widget.
-        fps: Positive timer frame-rate target, also passed to projectM.
+        fps: Positive frame-rate target, also passed to projectM.
         preset: Optional initial preset path, loaded after GL initialization.
 
     Construct and access the widget on the GUI thread. Preset and PCM methods
@@ -45,9 +46,14 @@ class ProjectMWidget(QOpenGLWidget):
         self._pending = []
         self._preset = None
         self._initialization_failed = False
+        self._rendering = False
         self._fps = integer(fps, "fps")
+        self._next_frame = time.monotonic()
         self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._timer.timeout.connect(self.update)
+        self.frameSwapped.connect(self._schedule_frame)
         self._command.connect(self._apply_command)
         app = QApplication.instance()
         if app is not None:
@@ -59,7 +65,7 @@ class ProjectMWidget(QOpenGLWidget):
 
     @property
     def fps(self) -> int:
-        """Positive timer frame-rate target; update this property on the GUI thread."""
+        """Positive frame-rate target; update this property on the GUI thread."""
         return self._fps
 
     @fps.setter
@@ -68,7 +74,19 @@ class ProjectMWidget(QOpenGLWidget):
         self._fps = integer(value, "fps")
         if self.pm is not None:
             self._apply_command(("__fps__", (self._fps,), {}))
-            self._timer.start(max(1, round(1000 / self._fps)))
+            self._rendering = True
+            self._next_frame = time.monotonic()
+            self._timer.start(0)
+
+    @Slot()
+    def _schedule_frame(self):
+        if not self._rendering or not self.isVisible():
+            return
+        now = time.monotonic()
+        self._next_frame = max(self._next_frame + 1.0 / self._fps, now)
+        # Request before the deadline's fractional millisecond so a 60 Hz
+        # display is not driven by a recurring 17 ms timer.
+        self._timer.start(max(0, int((self._next_frame - now) * 1000)))
 
     def initializeGL(self):
         """Initialize projectM when Qt makes the widget's GL context current."""
@@ -85,10 +103,12 @@ class ProjectMWidget(QOpenGLWidget):
             pending, self._pending = self._pending, []
             for command in pending:
                 self._apply_command(command)
-            self._timer.start(max(1, round(1000 / self._fps)))
+            self._rendering = True
+            self._next_frame = time.monotonic()
             self.initialized.emit()
         except Exception as error:
             self._initialization_failed = True
+            self._rendering = False
             self._timer.stop()
             self.error.emit(error)
 
@@ -115,6 +135,7 @@ class ProjectMWidget(QOpenGLWidget):
                 self.pm.render(framebuffer=int(self.defaultFramebufferObject()))
                 self.frame_rendered.emit()
             except Exception as error:
+                self._rendering = False
                 self._timer.stop()
                 self.error.emit(error)
 
@@ -183,6 +204,7 @@ class ProjectMWidget(QOpenGLWidget):
         is also connected to Qt context destruction and application shutdown.
         """
         require_gui_thread()
+        self._rendering = False
         self._timer.stop()
         self._initialization_failed = False
         if self.pm is not None:

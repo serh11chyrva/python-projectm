@@ -65,6 +65,11 @@ Escape closes the window. Pausing feeds silence and retains the source position;
 the visualization itself continues animating. The frame-rate target is chosen
 with `--fps` at launch.
 
+GPU statistics count Qt's `frameSwapped` presentations; CPU worker statistics
+count received frames, which may be coalesced before painting. Rendering targets
+do not guarantee the same display rate. The GPU widget schedules against
+monotonic deadlines instead of rounding 60 FPS to a repeating 17 ms interval.
+
 Both modes use Qt-native contexts and need no GLFW or ModernGL installation.
 The surface format is selected before creating `QApplication`. GPU commands go
 through `ProjectMWidget`; the example never issues a core call from an audio
