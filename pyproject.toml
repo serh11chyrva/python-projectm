@@ -24,8 +24,8 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Operating System :: Microsoft :: Windows",
-    "Topic :: Multimedia :: Sound/Audio :: Visualization",
-    "Topic :: Multimedia :: Graphics :: OpenGL",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Graphics",
 ]
 
 dependencies = ["numpy>=2.0,<3.0", "PyOpenGL>=3.1.10,<4.0.0"]

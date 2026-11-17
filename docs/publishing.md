@@ -73,6 +73,15 @@ Package versions and filenames on PyPI cannot be overwritten: if a release uploa
 inspect whether any files were accepted before retrying or choosing a new version.
 No automatic `skip-existing` policy hides conflicting uploads.
 
+An upload rejected with HTTP 400 requires reading the publishing job's verbose
+response before retrying. CI checks wheel classifiers against the pinned
+`trove-classifiers` catalog as well as running `twine check --strict`;
+description validation alone does not check classifier membership.
+Re-running a failed publishing job reuses its original wheel. Changes to
+package metadata require a fresh build and CI run. If the release tag already
+points to the previous commit, choose a new version or explicitly authorize a
+tag correction; the workflow never moves an existing tag automatically.
+
 ## Artifact contents and reproducibility
 
 `native-sources.json` pins the official projectM and GLEW release archives and

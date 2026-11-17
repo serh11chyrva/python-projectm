@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from packaging.specifiers import SpecifierSet
 from packaging.tags import parse_tag
 from packaging.utils import parse_wheel_filename
+from trove_classifiers import classifiers, deprecated_classifiers
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +62,15 @@ def check(path: Path) -> None:
         wheel_metadata = BytesParser().parsebytes(wheel.read(dist_info + "WHEEL"))
         if metadata["Name"] != project["name"] or SpecifierSet(metadata["Requires-Python"]) != SpecifierSet(project["requires-python"]):
             raise ValueError("Unexpected package name or Python requirement")
+        wheel_classifiers = set(metadata.get_all("Classifier", []))
+        if wheel_classifiers != set(project["classifiers"]):
+            raise ValueError("Wheel classifiers differ from the project metadata")
+        invalid_classifiers = wheel_classifiers - classifiers
+        if invalid_classifiers:
+            raise ValueError(f"Invalid PyPI classifiers: {sorted(invalid_classifiers)}")
+        deprecated = wheel_classifiers & deprecated_classifiers.keys()
+        if deprecated:
+            raise ValueError(f"Deprecated PyPI classifiers: {sorted(deprecated)}")
         if " ".join(str(metadata["License-Expression"]).split()) != project["license"]:
             raise ValueError("Missing or incorrect SPDX license expression")
         if "text/markdown" not in metadata.get("Description-Content-Type", ""):
