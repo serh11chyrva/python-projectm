@@ -64,9 +64,11 @@ Only the CMake `python` install component enters a wheel. Native SDK headers,
 import libraries, debug files, and local checkout binaries are excluded.
 
 Wheels use `py3-none` platform tags because ctypes does not depend on a Python
-extension ABI. Windows repair analyzes existing DLLs, preserves their filenames,
-and checks that every non-system PE dependency is bundled. Linux builds and
-auditwheel repair enforce manylinux_2_28, with relative runtime library paths.
+extension ABI. Windows repair uses `--analyze-existing` to inspect packaged DLLs
+and `--ignore-existing` to resolve dependencies from inside the extracted wheel.
+It preserves DLL filenames and checks that every non-system PE dependency is
+bundled. Linux builds and auditwheel repair enforce manylinux_2_28, with relative
+runtime library paths.
 The installed suite checks loading and rendering without build-machine paths;
 CI fails if an expected integration is skipped.
 

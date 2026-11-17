@@ -81,4 +81,6 @@ repair-wheel-command = "auditwheel repair --plat manylinux_2_28_x86_64 -w {dest_
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
 before-build = "python -m pip install delvewheel==1.10.0"
-repair-wheel-command = "delvewheel repair --analyze-existing --no-mangle-all -w {dest_dir} {wheel}"
+# Analyze every packaged DLL and resolve its dependencies inside the wheel first.
+# --analyze-existing alone searches for dependencies outside the extracted wheel.
+repair-wheel-command = "delvewheel repair --analyze-existing --ignore-existing --no-mangle-all -w {dest_dir} {wheel}"

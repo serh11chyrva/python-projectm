@@ -9,7 +9,7 @@ directory. Its SPDX expression describes the combined distribution; it does not
 relicense original binding code or external presets.
 
 ```{include} ../THIRD_PARTY_NOTICES.md
-:start-after: # Third-party components
+:start-after: "# Third-party components"
 ```
 
 See the [source guide](source-build.md) for rebuilding or replacing projectM,
