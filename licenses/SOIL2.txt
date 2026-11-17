@@ -1,0 +1,60 @@
+SOIL2 notices from the sources bundled in libprojectM 4.1.6
+========================================================
+
+SOIL2.c:
+    Fork by Martin Lucas Golini
+    Original author Jonathan Dummer, 2007-07-26-10.36
+    Simple OpenGL Image Library 2
+    Public Domain
+    using Sean Barret's stb_image as a base
+
+image_DXT.c and image_DXT.h:
+    Jonathan Dummer, 2007-07-31-10.32
+    simple DXT compression / decompression code
+    public domain
+
+image_helper.c and image_helper.h:
+    Jonathan Dummer
+    Image helper functions
+    MIT license
+
+The MIT terms for the image helpers:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+stb_image.h v2.05, Sean Barrett and contributors:
+    This software is in the public domain. Where that dedication is not
+    recognized, you are granted a perpetual, irrevocable license to copy
+    and modify this file however you want.
+
+stb_image_write.h v0.98:
+    public domain, Sean Barrett 2010
+    no warranty implied; use at your own risk
+
+etc1_utils.c and etc1_utils.h:
+    Copyright 2009 Google Inc.
+    Licensed under the Apache License, Version 2.0.
+    See Apache-2.0.txt for the complete license.
+
+stbi_pvr_c.h incorporates PVRTDecompress.cpp:
+    Copyright (C) Imagination Technologies Limited.
+    PVRTC Texture Decompression.
+
+The complete, unchanged upstream source notices accompany the release source
+archive under libprojectM-4.1.6/vendor/SOIL2/.

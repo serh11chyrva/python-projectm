@@ -2,12 +2,13 @@
 
 import argparse
 import wave
+from importlib.resources import files
 from pathlib import Path
 
 import numpy as np
 
 
-DEMO_PRESET = Path(__file__).resolve().parent / "presets" / "pulse.milk"
+DEMO_PRESET = Path(str(files("python_projectm").joinpath("presets/pulse.milk")))
 OUTPUT_DIR = Path(__file__).resolve().parent / "output"
 
 

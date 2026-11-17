@@ -1,15 +1,16 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core==0.11.6", "cmake==3.31.6", "ninja==1.11.1.4"]
+build-backend = "scikit_build_core.build"
 
 
 [project]
 name = "python-projectm"
 version = "1.0.0"
-description = "Python bindings for ProjectM (OpenGL music visualizer)"
+description = "Python bindings for the projectM music visualizer with bundled native libraries and OpenGL integrations"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "MIT AND LGPL-2.1-or-later AND Apache-2.0 AND LicenseRef-Bundled-Dependencies"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
+keywords = ["projectm", "milkdrop", "music", "visualization", "opengl", "numpy", "pyside6"]
 
 authors = [{ name = "serh11chyrva", email = "serhiichyrva@hotmail.com" }]
 
@@ -21,7 +22,9 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Topic :: Multimedia :: Sound/Audio :: Visualization",
     "Topic :: Multimedia :: Graphics :: OpenGL",
 ]
@@ -39,12 +42,43 @@ glfw = ["glfw>=2.10.0,<3.0.0"]
 Homepage = "https://github.com/serh11chyrva/python-projectm"
 Repository = "https://github.com/serh11chyrva/python-projectm"
 Issues = "https://github.com/serh11chyrva/python-projectm/issues"
+Documentation = "https://python-projectm.readthedocs.io/en/latest/"
+Changelog = "https://github.com/serh11chyrva/python-projectm/blob/main/CHANGELOG.md"
 
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["python_projectm", "python_projectm.*"]
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+wheel.packages = ["python_projectm"]
+wheel.py-api = "py3"
+# Native files come exclusively from CMake install, never from a previous local build.
+wheel.exclude = ["**/__pycache__/**", "**/*.pyc", "**/*.lib", "**/*.exp", "**/*.pdb", "**/.gitkeep"]
+install.components = ["python"]
+build.targets = ["pypm_capi"]
+sdist.include = ["libprojectM-4.1.6/**", "glew-2.2.0/**", ".github/**", "tools/**", "tests/**", "examples/**", "native-sources.json", "vcpkg.json", "uv.lock"]
+sdist.exclude = ["**/__pycache__/**", "/build/**", "libprojectM-4.1.6/build*/**", "pypm_wrapper/build*/**", "**/CMakeFiles/**", "**/CMakeCache.txt", "**/*.dll", "**/*.so*", "**/*.dylib", "**/*.lib", "**/*.a", "**/*.exp", "**/*.pdb", "**/*.obj", "docs/_build/**"]
 
+[tool.scikit-build.cmake.define]
+BUILD_SHARED_LIBS = "ON"
+ENABLE_SYSTEM_GLM = "OFF"
+ENABLE_SYSTEM_PROJECTM_EVAL = "OFF"
+ENABLE_PLAYLIST = "OFF"
+ENABLE_SDL_UI = "OFF"
+BUILD_TESTING = "OFF"
+PYPM_COPY_NATIVE_TO_SOURCE = "OFF"
 
-[tool.setuptools.package-data]
-python_projectm = ["native/bin/*.dll", "native/bin/*.so", "native/bin/*.dylib"]
+[tool.cibuildwheel]
+# ctypes needs one build per platform. Every supported Python is tested in CI.
+build = ["cp311-win_amd64", "cp311-manylinux_x86_64"]
+test-skip = "*"
+build-verbosity = 1
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:2025.06.08-1"
+before-all = "dnf install -y mesa-libGL-devel libX11-devel libXext-devel"
+repair-wheel-command = "auditwheel repair --plat manylinux_2_28_x86_64 -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+before-build = "python -m pip install delvewheel==1.10.0"
+repair-wheel-command = "delvewheel repair --analyze-existing --no-mangle-all -w {dest_dir} {wheel}"

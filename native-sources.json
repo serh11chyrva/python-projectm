@@ -1,0 +1,18 @@
+{
+  "projectm": {
+    "version": "4.1.6",
+    "directory": "libprojectM-4.1.6",
+    "url": "https://github.com/projectM-visualizer/projectm/releases/download/v4.1.6/libprojectM-4.1.6.tar.gz",
+    "sha256": "1b9e6d56c59fe24e5416da4d42e941a34c982811003e43ac88b5aca8afa52c87"
+  },
+  "glew": {
+    "version": "2.2.0",
+    "directory": "glew-2.2.0",
+    "url": "https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.tgz",
+    "sha512": "57453646635609d54f62fb32a080b82b601fd471fcfd26e109f479b3fef6dfbc24b83f4ba62916d07d62cd06d1409ad7aa19bc1cd7cf3639c103c815b8be31d1"
+  },
+  "vcpkg": {
+    "commit": "ef7dbf94b9198bc58f45951adcf1f041fcbc5ea0",
+    "triplet": "x64-windows"
+  }
+}

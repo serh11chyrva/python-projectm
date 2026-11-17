@@ -2,7 +2,7 @@
 # Compile a copy that remembers the caller's draw framebuffer instead. This keeps
 # the upstream checkout and the public projectM C/C++ interfaces unchanged.
 set(_pypm_projectm_source
-    "${CMAKE_CURRENT_SOURCE_DIR}/libprojectM-4.1.6/src/libprojectM/ProjectM.cpp")
+    "${PYPM_PROJECTM_SOURCE_DIR}/src/libprojectM/ProjectM.cpp")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_pypm_projectm_source}")
 file(READ "${_pypm_projectm_source}" _pypm_projectm_code)
 string(REPLACE "\r\n" "\n" _pypm_projectm_code "${_pypm_projectm_code}")
@@ -21,6 +21,9 @@ string(REPLACE "${_pypm_bind_default}"
     _pypm_projectm_code "${_pypm_projectm_code}")
 set(_pypm_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/pypm_projectm")
 file(MAKE_DIRECTORY "${_pypm_generated_dir}")
+# A prominent modification notice accompanies the generated LGPL source copy.
+string(PREPEND _pypm_projectm_code
+    "// Modified by python-projectm on 2026-11-17: preserve the caller's draw framebuffer.\n")
 file(CONFIGURE OUTPUT "${_pypm_generated_dir}/ProjectM.cpp"
     CONTENT "${_pypm_projectm_code}" @ONLY)
 get_target_property(_pypm_projectm_sources projectM_main SOURCES)

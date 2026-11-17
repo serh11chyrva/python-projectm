@@ -62,9 +62,9 @@ documentation version string needs updating for a release.
 - Write documentation and docstrings in English.
 - Add new pages to a `toctree` in `index.md` or the relevant reference index.
 - Use Markdown for guides and reStructuredText directives for API pages.
-- Keep installation commands in the root `README.md`. The installation page
-  includes the marked section rather than maintaining a second copy.
-- Keep short native troubleshooting notes between the README's include markers.
+- Keep the README focused on binary installation and a self-contained quick start.
+- Maintain native toolchains and editable commands in `source-build.md`, and
+  user-facing loader and context advice in `troubleshooting.md`.
 - Add exported classes and functions to the appropriate `docs/api/` page.
 - Describe arguments, return values, meaningful exceptions, ownership, and thread
   or context requirements in public API docstrings.

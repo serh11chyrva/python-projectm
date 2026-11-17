@@ -100,7 +100,7 @@ install(FILES include/pypm_capi.h
     DESTINATION include
 )
 
-if(NOT WIN32)
+if(PYPM_COPY_NATIVE_TO_SOURCE AND NOT WIN32)
     add_custom_command(TARGET pypm_capi POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPM_NATIVE_BIN_DIR}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -112,19 +112,21 @@ if(NOT WIN32)
 endif()
 
 # POST_BUILD commands must be declared in the directory that owns the target.
-add_custom_command(TARGET pypm_capi POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPM_NATIVE_BIN_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:pypm_capi>" "${PYPM_NATIVE_BIN_DIR}"
-    VERBATIM
-)
-
-if (WIN32)
-    # Includes projectM and its transitive DLL dependencies (such as GLEW).
+if(PYPM_COPY_NATIVE_TO_SOURCE)
     add_custom_command(TARGET pypm_capi POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPM_NATIVE_BIN_DIR}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:pypm_capi> "${PYPM_NATIVE_BIN_DIR}"
-        COMMAND_EXPAND_LISTS
+            "$<TARGET_FILE:pypm_capi>" "${PYPM_NATIVE_BIN_DIR}"
         VERBATIM
     )
+
+    if (WIN32)
+        # Includes projectM and its transitive DLL dependencies (such as GLEW).
+        add_custom_command(TARGET pypm_capi POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:pypm_capi> "${PYPM_NATIVE_BIN_DIR}"
+            COMMAND_EXPAND_LISTS
+            VERBATIM
+        )
+    endif()
 endif()

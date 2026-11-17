@@ -242,6 +242,8 @@ wheelhouse/
 
 #
 /libprojectM-4.1.6
+/glew-2.2.0
+/vcpkg_installed/
 
 # Local presets and generated example output
 /examples/*.milk

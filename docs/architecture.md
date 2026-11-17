@@ -65,4 +65,5 @@ directory. That copy retains the caller's target framebuffer.
 The adaptation preserves upstream source files and interfaces. The wrapper
 and the adapted projectM library must be built and deployed together; an
 unrelated prebuilt projectM binary cannot provide the same framebuffer behavior.
-Follow the [installation guide](installation.md) for the supported procedure.
+Official wheels already include the adapted library. Follow the
+[source build guide](source-build.md) for custom native builds.

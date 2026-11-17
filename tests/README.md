@@ -2,7 +2,7 @@
 
 The suite uses Python's standard `unittest` runner; no test dependency is needed.
 Run commands from the repository root, using the existing environment described
-in [README.md](../README.md). These commands never install or synchronize packages.
+in the [source guide](../docs/source-build.md). These commands never install or synchronize packages.
 
 ## Unit tests
 
@@ -18,7 +18,8 @@ test modules are skipped.
 
 ## Real rendering tests
 
-Build projectM and `pypm_capi` together first, following the root README. Install
+Prepare an editable native build or select a manual wrapper using
+`PYTHON_PROJECTM_LIBRARY`, following the source guide. Install
 the desired optional dependencies before running these tests: GLFW for GLFW and
 default NumPy rendering, PySide6 for Qt, and the application's ModernGL package
 for ModernGL. The tests do not install missing dependencies.
@@ -56,3 +57,13 @@ Use `tests.integration.test_glfw_numpy` or `tests.integration.test_moderngl` for
 the other adapters. On Linux/macOS use the environment's Python executable and
 the equivalent shell environment-variable syntax. Those platforms still need
 matching native libraries and a supported OpenGL backend.
+
+## GitHub Actions
+
+CI runs the existing unit suites on Windows/Linux and CPython 3.11–3.14.
+Separate jobs build platform wheels and copy `tests/` and `examples/` outside
+the checkout before running `tools/run_ci_tests.py --integration`. This ensures
+the rendering tests import the installed wheel and use its native resources.
+All optional integration packages are installed for this run; unexpected skips
+fail the required job. Mesa supplies software OpenGL, with Xvfb on Linux.
+No test cases are added or rewritten by this packaging workflow.

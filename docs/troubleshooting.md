@@ -2,17 +2,29 @@
 
 ## Native installation
 
-The following build and loader notes are shared with the repository README.
-
-```{include} ../README.md
-:start-after: <!-- docs-troubleshooting-start -->
-:end-before: <!-- docs-troubleshooting-end -->
-```
+- **No matching distribution:** use standard CPython 3.11–3.14, Windows x64 or
+  Linux x86_64 with glibc 2.28+. macOS, ARM, musl, and free-threaded Python are
+  outside the supported binary matrix. See [source builds](source-build.md)
+  for custom builds; PyPI does not provide a compilation fallback.
+- **Missing wrapper or DLL load failure:** reinstall the matching wheel in the
+  active Python environment. Native libraries must have the same architecture
+  as Python. Official wheels include projectM, GLEW where needed, and app-local
+  MSVC runtime files; a separate projectM or VC++ redist installation is not
+  part of the normal wheel procedure.
+- **Unexpected library selected:** check `PYTHON_PROJECTM_LIBRARY`. This optional
+  override selects a custom wrapper and its sibling dependencies before the
+  first native call. Unset it to use the packaged libraries.
+- **Source build fails to find GLEW:** use the Windows vcpkg toolchain in the
+  [source guide](source-build.md), with the shared `x64-windows` triplet.
+- **Qt platform plugin fails on Linux:** the PySide6 extra needs glibc 2.34+
+  and the system libraries required by its XCB platform plugin, including
+  `libxcb-cursor0` on Ubuntu. A working graphics driver and session are still needed.
 
 ## Missing native symbol
 
-Rebuild projectM and `pypm_capi` together through the root CMake project using
-the [installation guide](installation.md). The framebuffer adaptation and
+For a wheel, reinstall the current matching distribution. For a custom build,
+rebuild projectM and `pypm_capi` together through the root CMake project using
+the [source guide](source-build.md). The framebuffer adaptation and
 wrapper must be deployed together; an older wrapper or unrelated projectM
 binary does not provide the expected behavior.
 

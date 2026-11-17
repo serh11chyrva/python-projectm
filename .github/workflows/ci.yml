@@ -1,0 +1,253 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit / ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+        python: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - run: python -m pip install numpy==2.4.1 PyOpenGL==3.1.10
+      - run: python tools/run_ci_tests.py
+
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r docs/requirements.txt
+      - run: python -m sphinx -b html -W --keep-going docs docs/_build/html
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: documentation-html
+          path: docs/_build/html
+          if-no-files-found: error
+
+  sources:
+    name: Corresponding sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Read version and validate release tag
+        id: metadata
+        shell: python
+        run: |
+          import json, os, re, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('pyproject.toml').read_text())['project']['version']
+          if os.environ['GITHUB_EVENT_NAME'] == 'release':
+              event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+              tag = event['release']['tag_name']
+              if tag != f'v{version}' or not re.fullmatch(r'\d+\.\d+\.\d+', version):
+                  raise SystemExit(f'Release tag {tag!r} must match stable project version v{version}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={version}\n')
+      - name: Set source timestamp
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - run: python -m pip install -r tools/requirements-ci.txt
+      - run: python tools/prepare_sources.py
+      - run: python -m build --sdist --outdir dist/sources
+      - name: Check corresponding sources
+        shell: python
+        run: |
+          import tarfile, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('pyproject.toml').read_text())['project']['version']
+          archives = list(Path('dist/sources').glob('*.tar.gz'))
+          if len(archives) != 1:
+              raise SystemExit('Expected one corresponding-source archive')
+          with tarfile.open(archives[0]) as archive:
+              names = set(archive.getnames())
+          prefix = f'python_projectm-{version}/'
+          for required in ('libprojectM-4.1.6/src/libprojectM/ProjectM.cpp',
+                           'glew-2.2.0/build/cmake/CMakeLists.txt',
+                           'pypm_wrapper/src/pypm_capi.cpp',
+                           'cmake/ProjectMFramebuffer.cmake',
+                           'THIRD_PARTY_NOTICES.md', 'tools/setup_vcpkg.ps1'):
+              if prefix + required not in names:
+                  raise SystemExit(f'Missing corresponding source: {required}')
+          if any(name.endswith(('.dll', '.so', '.dylib', '.lib', '.a', '.pdb', '.exp', '.obj')) for name in names):
+              raise SystemExit('Compiled artifact in corresponding sources')
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-sources
+          path: dist/sources/*.tar.gz
+          if-no-files-found: error
+
+  wheels:
+    name: Wheel / ${{ matrix.platform }}
+    needs: sources
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            platform: windows
+          - os: ubuntu-24.04
+            platform: linux
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: native-sources
+          path: source-dist
+      - name: Extract verified release inputs
+        shell: bash
+        run: |
+          mkdir package
+          tar -xzf source-dist/*.tar.gz -C package
+      - name: Enable MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+      - name: Build pinned GLEW
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/setup_vcpkg.ps1 -SourceRoot "${{ github.workspace }}/package/python_projectm-${{ needs.sources.outputs.version }}"
+      - uses: pypa/cibuildwheel@5f22145df44122af0f5a201f93cf0207171beca7 # v3.0.0
+        with:
+          package-dir: package/python_projectm-${{ needs.sources.outputs.version }}
+          output-dir: wheelhouse
+        env:
+          CIBW_CONFIG_SETTINGS_WINDOWS: 'cmake.define.VCPKG_MANIFEST_MODE=OFF cmake.define.VCPKG_TARGET_TRIPLET=x64-windows'
+      - run: python -m pip install -r tools/requirements-ci.txt
+      - name: Check wheel metadata, contents and architecture
+        shell: bash
+        run: |
+          python tools/check_wheel.py wheelhouse/*.whl
+          python -m twine check --strict wheelhouse/*.whl
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wheel-${{ matrix.platform }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  installed:
+    name: Installed wheel / ${{ matrix.platform }} / Python ${{ matrix.python }}
+    needs: wheels
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+        python: ['3.11', '3.12', '3.13', '3.14']
+        include:
+          - os: windows-2022
+            platform: windows
+          - os: ubuntu-24.04
+            platform: linux
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      GALLIUM_DRIVER: llvmpipe
+      QT_OPENGL: desktop
+      QT_QPA_PLATFORM: ${{ matrix.platform == 'linux' && 'xcb' || 'windows' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wheel-${{ matrix.platform }}
+          path: wheelhouse
+      - name: Install the binary distribution
+        shell: bash
+        run: python -m pip install --only-binary=:all: wheelhouse/*.whl
+      - name: Install Linux graphics runtime
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxrandr2 libxinerama1 libxcursor1 libxi6 libgl1-mesa-dev libx11-dev
+      - name: Install Windows software OpenGL
+        if: runner.os == 'Windows'
+        uses: ssciwr/setup-mesa-dist-win@6657792673a5d162d5f244db991ba45b4b68989f # v2
+        with:
+          version: '23.3.3'
+          build-type: release-msvc
+          deployment-choice: '1'
+      - name: Install rendering harness dependencies
+        # ModernGL/glcontext may build their own test-harness extensions on a
+        # new Python; installation of python-projectm above remains binary-only.
+        run: python -m pip install -r tools/requirements-rendering.txt
+      - name: Stage the existing suites outside the checkout
+        shell: python
+        run: |
+          import os, shutil
+          from pathlib import Path
+          target = Path(os.environ['RUNNER_TEMP']) / 'python-projectm-installed-tests'
+          target.mkdir()
+          for name in ('tests', 'examples'):
+              shutil.copytree(name, target / name, ignore=shutil.ignore_patterns('__pycache__', 'output'))
+      - name: Render and inspect pixels on Linux
+        if: runner.os == 'Linux'
+        working-directory: ${{ runner.temp }}/python-projectm-installed-tests
+        run: xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX' python "${{ github.workspace }}/tools/run_ci_tests.py" --integration
+      - name: Render and inspect pixels on Windows
+        if: runner.os == 'Windows'
+        working-directory: ${{ runner.temp }}/python-projectm-installed-tests
+        run: python "${{ github.workspace }}/tools/run_ci_tests.py" --integration
+
+  baseline:
+    name: Linux glibc 2.28 load
+    needs: wheels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wheel-linux
+          path: wheelhouse
+      - name: Load in a fresh manylinux baseline container
+        run: |
+          docker run --rm -v "$PWD/wheelhouse:/wheels:ro" -w /tmp \
+            quay.io/pypa/manylinux_2_28_x86_64:2025.06.08-1 \
+            bash -ec 'dnf install -y mesa-libGL; /opt/python/cp311-cp311/bin/python -m pip install --only-binary=:all: /wheels/*.whl; /opt/python/cp311-cp311/bin/python -c "from python_projectm.core.version import get_version_string; assert get_version_string() == \"4.1.6\""'

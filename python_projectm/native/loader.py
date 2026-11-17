@@ -1,9 +1,12 @@
 """Load the wrapper and retain Windows DLL search directories for its lifetime."""
 
+import atexit
 import ctypes
 import os
 import sys
+from contextlib import ExitStack
 from functools import lru_cache
+from importlib.resources import as_file, files
 from pathlib import Path
 
 from python_projectm.native.errors import NativeError, NativeLibraryNotFound
@@ -14,9 +17,18 @@ LIB_NAME = {
 }.get(sys.platform, "libpypm_capi.so")
 
 _dll_directories: dict[str, object] = {}
+_resource_files = ExitStack()
+atexit.register(_resource_files.close)
 
 
 def _native_bin_dir() -> Path:
+    # CMake installs a resource package that also resolves in editable mode.
+    try:
+        resource = files("python_projectm.native.bin").joinpath(LIB_NAME)
+    except ModuleNotFoundError:
+        return Path(__file__).resolve().parent / "bin"
+    if resource.is_file():
+        return _resource_files.enter_context(as_file(resource)).parent
     return Path(__file__).resolve().parent / "bin"
 
 
@@ -33,7 +45,8 @@ def load_native_library() -> ctypes.CDLL:
     library = Path(override).expanduser().resolve() if override else _native_bin_dir() / LIB_NAME
     if not library.is_file():
         raise NativeLibraryNotFound(
-            f"Native library not found: {library}. Build the native wrapper as described in README.md."
+            f"Native library not found: {library}. Reinstall a compatible python-projectm wheel "
+            "or follow https://python-projectm.readthedocs.io/en/latest/installation.html."
         )
     try:
         _load_dependencies_windows(library.parent)

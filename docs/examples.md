@@ -1,8 +1,8 @@
 # Runnable examples
 
 The `examples/` package contains complete applications using an original preset
-and a shared PCM source. Build the native libraries and prepare the Python
-environment using the [installation guide](installation.md). Run all commands
+and a shared PCM source. Prepare the checkout's editable environment using
+the [source guide](source-build.md). Run all commands
 from the repository root.
 
 | Integration | Command | Additional dependency |
@@ -25,7 +25,7 @@ loops while rendering. Audio is analyzed for visualization without playback,
 microphone capture, or system-audio capture.
 
 Common arguments include `--preset`, `--wav`, `--width`, `--height`, `--fps`,
-and `--frames`. The bundled `examples/presets/pulse.milk` needs no texture pack
+and `--frames`. The packaged `python_projectm/presets/pulse.milk` needs no texture pack
 or download. Other presets can have separate assets and licensing requirements.
 
 ## Frame export

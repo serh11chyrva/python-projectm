@@ -1,8 +1,8 @@
 # Rendering integrations
 
-All renderers use the same `ProjectM` core. The native libraries must be built
-together through the root CMake project; see the [installation guide](installation.md) for
-installation and build instructions. Native loading is deferred until the first
+All renderers use the same `ProjectM` core. Binary wheels include the matching
+native libraries built together through the root CMake project; see the
+[installation guide](installation.md). Native loading is deferred until the first
 native call, so importing an adapter does not load the native wrapper library.
 
 The [runnable examples](examples.md) cover all four integrations with

@@ -1,0 +1,7 @@
+# Exercise the installed wheel with every optional integration.
+numpy==2.4.1
+PyOpenGL==3.1.10
+glfw==2.10.0
+PySide6==6.10.1
+moderngl==5.12.0
+glcontext==3.0.0

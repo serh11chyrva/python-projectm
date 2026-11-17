@@ -1,0 +1,15 @@
+projectM: 4.1.6
+Source: @PYPM_PROJECTM_URL@
+Source SHA-256: @PYPM_PROJECTM_SHA256@
+Modification: preserve the caller's draw framebuffer (cmake/ProjectMFramebuffer.cmake)
+Compiler: @CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@
+Generator: @CMAKE_GENERATOR@
+System: @CMAKE_SYSTEM_NAME@ @CMAKE_SYSTEM_PROCESSOR@
+Configuration: Release
+C++ flags: @CMAKE_CXX_FLAGS@ @CMAKE_CXX_FLAGS_RELEASE@
+Shared linker flags: @CMAKE_SHARED_LINKER_FLAGS@ @CMAKE_SHARED_LINKER_FLAGS_RELEASE@
+Wrapper C++ standard: 17
+MSVC runtime: @CMAKE_MSVC_RUNTIME_LIBRARY@
+Shared libraries: @BUILD_SHARED_LIBS@
+GLEW: 2.2.0 on Windows, vcpkg baseline ef7dbf94b9198bc58f45951adcf1f041fcbc5ea0
+Corresponding sources: https://github.com/serh11chyrva/python-projectm/releases

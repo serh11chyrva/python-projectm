@@ -1,8 +1,8 @@
 # Quick start
 
-Complete the [installation guide](installation.md) first. Run these snippets
-from the repository root so `examples/presets/pulse.milk` resolves to the bundled
-original preset. Native libraries must be available before creating a renderer.
+Complete the [installation guide](installation.md) first. These snippets use
+the original preset included in the installed package and work from any
+directory. A graphical session and desktop OpenGL 3.3+ are required.
 
 ## Open a GLFW window
 
@@ -10,14 +10,17 @@ Install the package's `glfw` extra as described in the installation guide.
 Create the window, poll events, submit PCM, and render on the main thread:
 
 ```python
+from importlib.resources import files
+
 import glfw
 import numpy as np
 
 from python_projectm.integrations.glfw import GLFWRenderer
 
+preset = files("python_projectm").joinpath("presets/pulse.milk").read_text(encoding="utf-8")
 try:
     with GLFWRenderer(width=960, height=540) as renderer:
-        renderer.load_preset_file("examples/presets/pulse.milk", smooth=False)
+        renderer.load_preset_data(preset, smooth=False)
         with renderer.current() as pm:
             pm.fps = 60
             glfw.swap_interval(1)
@@ -42,14 +45,17 @@ The default NumPy renderer owns a hidden GLFW window and also needs the `glfw`
 extra and main-thread use:
 
 ```python
+from importlib.resources import files
+
 import glfw
 import numpy as np
 
 from python_projectm.integrations.numpy import NumpyRenderer
 
+preset = files("python_projectm").joinpath("presets/pulse.milk").read_text(encoding="utf-8")
 try:
     with NumpyRenderer(640, 360) as renderer:
-        renderer.load_preset_file("examples/presets/pulse.milk", smooth=False)
+        renderer.load_preset_data(preset, smooth=False)
         renderer.add_pcm(np.zeros((512, 2), dtype=np.float32))
         frame = renderer.render_frame()
         # frame: writable C-contiguous uint8 RGBA, shape (360, 640, 4).
@@ -68,12 +74,15 @@ Make the application's desktop OpenGL 3.3+ context current before construction,
 and keep the original context current for every core operation and cleanup:
 
 ```python
+from importlib.resources import files
+
 from python_projectm import ProjectM
 
+preset = files("python_projectm").joinpath("presets/pulse.milk").read_text(encoding="utf-8")
 # The application has made its own OpenGL context current here.
 with ProjectM() as pm:
     pm.set_size(1280, 720)
-    pm.load_preset_file("examples/presets/pulse.milk", smooth=False)
+    pm.load_preset_data(preset, smooth=False)
     pm.beat_sensitivity = 1.0
     pm.render()  # Render to the currently bound draw framebuffer.
 ```

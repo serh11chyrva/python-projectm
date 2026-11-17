@@ -1,0 +1,16 @@
+LicenseRef-Bundled-Dependencies identifies the additional, component-specific
+terms reproduced in this distribution. It does not replace those terms or
+relicense third-party code. See THIRD_PARTY_NOTICES.md for component mapping.
+
+GLEW (Windows): the BSD-style and MIT-style terms are reproduced in GLEW.txt.
+GLM: distributed under the MIT alternative reproduced in GLM.txt.
+projectM-eval and HLSLParser: MIT, reproduced in their respective license files.
+SOIL2 and its incorporated image-loading code: public-domain dedications,
+MIT-licensed image helpers, Apache-2.0 ETC1 code, and original attribution
+notices are reproduced in SOIL2.txt and Apache-2.0.txt.
+Microsoft Visual C++ runtime (Windows): redistribution terms and component
+identification are described in MSVC-RUNTIME.txt.
+
+Only components present in a particular wheel apply to that wheel. Separately
+installed Python dependencies, graphics drivers, and applications retain their
+own licenses and are not relicensed by this distribution.

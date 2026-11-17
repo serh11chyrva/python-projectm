@@ -1,0 +1,5 @@
+# Build and publication tools; application dependencies remain in pyproject.toml.
+build==1.2.2.post1
+packaging==25.0
+twine==6.1.0
+pefile==2023.2.7; sys_platform == 'win32'

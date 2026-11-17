@@ -3,11 +3,17 @@
 The original Python bindings, C++ wrapper, and bundled original example preset
 use the repository's MIT License. The complete license text is included below.
 
-projectM is a separate upstream library under LGPL v2.1. See the repository
-[licensing overview](https://github.com/serh11chyrva/python-projectm/blob/main/README.md)
-and the [projectM 4.1.6 license](https://github.com/projectM-visualizer/projectm/blob/v4.1.6/LICENSE.txt)
-for its terms and redistribution requirements. Other dependencies and external
-presets retain their respective licenses.
+Binary wheels also contain separately licensed native components. The installed
+distribution includes their license texts under its `.dist-info/licenses/`
+directory. Its SPDX expression describes the combined distribution; it does not
+relicense original binding code or external presets.
+
+```{include} ../THIRD_PARTY_NOTICES.md
+:start-after: # Third-party components
+```
+
+See the [source guide](source-build.md) for rebuilding or replacing projectM,
+and [publishing](publishing.md) for how corresponding sources accompany wheels.
 
 ```{literalinclude} ../LICENSE
 :language: text

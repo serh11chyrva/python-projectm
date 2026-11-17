@@ -1,7 +1,7 @@
 # Runnable examples
 
-Build the native libraries and use the existing Python environment described in
-the root [README.md](../README.md). Run these commands **from the repository root**
+Prepare the editable Python environment described in the
+[source guide](../docs/source-build.md). Run these commands **from the repository root**
 as modules; the examples share a small PCM source and a bundled original preset.
 No preset download, texture pack, audio device, or image-writing package is needed.
 
@@ -38,10 +38,10 @@ do not play sound, capture the microphone, or capture system audio. The small
 timer-paced audio source demonstrates the submission API rather than an audio
 playback clock. A real audio callback should hand copies to the rendering thread.
 
-`presets/pulse.milk` was written for these examples and uses no external assets;
+The packaged `python_projectm/presets/pulse.milk` was written for these examples and uses no external assets;
 it shares the repository's MIT license. Other presets may have their own licenses
 and texture requirements. Presets placed directly in `examples/` remain local;
-the `examples/presets/` directory contains the versioned demonstration preset.
+the demonstration preset is resolved through the installed package's resources.
 Generated images in `examples/output/` are ignored by Git.
 
 ## PySide6 studio

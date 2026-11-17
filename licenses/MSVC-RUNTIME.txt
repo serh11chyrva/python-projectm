@@ -1,0 +1,22 @@
+Microsoft Visual C++ runtime (Windows wheels only)
+================================================
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Windows wheels use app-local deployment of the Release runtime files selected
+by CMake's InstallRequiredSystemLibraries from the Visual Studio Build Tools
+installation. These may include msvcp140*.dll, vcruntime140*.dll, concrt140.dll,
+and associated runtime DLLs. The exact files are listed in the wheel's RECORD.
+These files are proprietary Microsoft components, not MIT or LGPL software.
+
+Redistribution is governed by the applicable Microsoft Visual Studio license
+and REDIST list supplied with the build tools, not the repository's MIT license.
+
+Microsoft redistribution documentation:
+https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
+
+Visual Studio license terms and redistribution lists:
+https://visualstudio.microsoft.com/license-terms/
+
+Operating-system components, including OpenGL32.dll and the Universal CRT, are
+provided by Windows and are not included in this package.
