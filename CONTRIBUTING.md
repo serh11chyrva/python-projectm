@@ -30,7 +30,7 @@ keep the vcpkg manifest baseline consistent when changing native inputs.
 
 The existing [unittest suites](tests/README.md) cover unit behavior and opt-in
 real rendering. [Documentation instructions](docs/documentation.md) describe the
-strict Sphinx build. CI runs both, builds Windows/Linux wheels, and tests their
+strict Sphinx build. CI runs both, builds the Windows x64 wheel, and tests its
 installation outside the checkout. No new test framework is required.
 
 Use Conventional Commits, such as `fix(native): retain DLL search directories`.

@@ -2,8 +2,8 @@
 
 ## Native installation
 
-- **No matching distribution:** use standard CPython 3.11–3.14, Windows x64 or
-  Linux x86_64 with glibc 2.28+. macOS, ARM, musl, and free-threaded Python are
+- **No matching distribution:** version 1.0.0 requires standard CPython 3.11–3.14
+  on Windows x64. Linux, macOS, ARM, and free-threaded Python are
   outside the supported binary matrix. See [source builds](source-build.md)
   for custom builds; PyPI does not provide a compilation fallback.
 - **Missing wrapper or DLL load failure:** reinstall the matching wheel in the
@@ -16,9 +16,6 @@
   first native call. Unset it to use the packaged libraries.
 - **Source build fails to find GLEW:** use the Windows vcpkg toolchain in the
   [source guide](source-build.md), with the shared `x64-windows` triplet.
-- **Qt platform plugin fails on Linux:** the PySide6 extra needs glibc 2.34+
-  and the system libraries required by its XCB platform plugin, including
-  `libxcb-cursor0` on Ubuntu. A working graphics driver and session are still needed.
 
 ## Missing native symbol
 

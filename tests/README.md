@@ -54,16 +54,16 @@ $env:PYTHON_PROJECTM_RUN_GL_TESTS = '1'
 ```
 
 Use `tests.integration.test_glfw_numpy` or `tests.integration.test_moderngl` for
-the other adapters. On Linux/macOS use the environment's Python executable and
-the equivalent shell environment-variable syntax. Those platforms still need
-matching native libraries and a supported OpenGL backend.
+the other adapters. Custom Linux/macOS builds need matching native libraries,
+a supported OpenGL backend, and equivalent shell environment-variable syntax.
+They are outside the supported 1.0.0 release and CI matrix.
 
 ## GitHub Actions
 
-CI runs the existing unit suites on Windows/Linux and CPython 3.11–3.14.
-Separate jobs build platform wheels and copy `tests/` and `examples/` outside
+CI runs the existing unit suites on Windows x64 and CPython 3.11–3.14.
+Separate jobs build the Windows wheel and copy `tests/` and `examples/` outside
 the checkout before running `tools/run_ci_tests.py --integration`. This ensures
 the rendering tests import the installed wheel and use its native resources.
 All optional integration packages are installed for this run; unexpected skips
-fail the required job. Mesa supplies software OpenGL, with Xvfb on Linux.
+fail the required job. Mesa supplies software OpenGL on Windows.
 No test cases are added or rewritten by this packaging workflow.

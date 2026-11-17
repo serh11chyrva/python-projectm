@@ -9,7 +9,7 @@ bindings accept PCM for visualization; they do not capture or play audio.
 
 ```{important}
 Rendering requires desktop OpenGL 3.3 or newer. PyPI wheels include matching
-projectM and wrapper libraries for Windows x64 and Linux x86_64 on CPython
+projectM and wrapper libraries for Windows x64 on CPython
 3.11–3.14. NumPy output still uses OpenGL and needs a compatible context.
 ```
 

@@ -6,8 +6,8 @@ Install a binary wheel from PyPI:
 python -m pip install python-projectm
 ```
 
-Wheels support Windows x64 and Linux x86_64 with glibc 2.28+, on standard
-CPython 3.11–3.14. Each wheel contains projectM 4.1.6, the Python-facing native
+Version 1.0.0 provides Windows x64 wheels for standard CPython 3.11–3.14.
+Each wheel contains projectM 4.1.6, the Python-facing native
 wrapper, and the required redistributable native dependencies. Installation
 does not invoke CMake or download projectM. PyPI contains no source distribution,
 so unsupported systems receive pip's "no matching distribution" error instead
@@ -27,9 +27,8 @@ python -m pip install "python-projectm[glfw,pyside6]"
 ```
 
 GLFW is needed for `GLFWRenderer` and the default hidden-window `NumpyRenderer`.
-Qt renderers use the `pyside6` extra. PySide6 6.10.1 requires glibc 2.34+ on
-Linux x86_64 and the Qt platform plugin's system libraries. Its requirements are
-separate from the core wheel's manylinux_2_28 baseline.
+Qt renderers use the `pyside6` extra and follow Qt's Windows system requirements.
+Linux and macOS wheels are not part of the 1.0.0 release.
 
 The ModernGL adapter borrows a context from the application's existing ModernGL
 installation. It does not install ModernGL or create a second context. NumPy

@@ -47,8 +47,7 @@ def check(path: Path) -> None:
     if str(version) != project["version"]:
         raise ValueError(f"Wrong release version: {path}")
     platforms = {tag.platform for tag in tags}
-    windows = platforms == {"win_amd64"}
-    if not windows and "manylinux_2_28_x86_64" not in platforms:
+    if platforms != {"win_amd64"}:
         raise ValueError(f"Unexpected platform tags: {tags}")
     if any(tag.interpreter != "py3" or tag.abi != "none" for tag in tags):
         raise ValueError(f"Expected Python ABI-independent platform tags: {tags}")
@@ -79,7 +78,7 @@ def check(path: Path) -> None:
             if required not in names:
                 raise ValueError(f"Missing package resource: {required}")
         native = [name for name in names if name.startswith("python_projectm/native/bin/")]
-        required_libraries = ("pypm_capi.dll", "projectM-4.dll", "glew32.dll", "msvcp140.dll") if windows else ("libpypm_capi.so", "libprojectM-4.so.4")
+        required_libraries = ("pypm_capi.dll", "projectM-4.dll", "glew32.dll", "msvcp140.dll")
         for library in required_libraries:
             if "python_projectm/native/bin/" + library not in native:
                 raise ValueError(f"Missing bundled native library: {library}")
@@ -92,12 +91,9 @@ def check(path: Path) -> None:
                 offset = struct.unpack_from("<I", data, 0x3C)[0]
                 if data[:2] != b"MZ" or data[offset:offset + 4] != b"PE\0\0" or struct.unpack_from("<H", data, offset + 4)[0] != 0x8664:
                     raise ValueError(f"Not an x64 PE library: {name}")
-            if ".so" in PurePosixPath(name).name:
-                data = wheel.read(name)
-                if data[:6] != b"\x7fELF\x02\x01" or struct.unpack_from("<H", data, 18)[0] != 62:
-                    raise ValueError(f"Not an x86_64 ELF library: {name}")
-        if windows:
-            check_windows_dependencies(wheel, names)
+            if ".so" in PurePosixPath(name).name or suffix == ".dylib":
+                raise ValueError(f"Non-Windows native library in release wheel: {name}")
+        check_windows_dependencies(wheel, names)
     print(f"Validated {path.name}")
 
 

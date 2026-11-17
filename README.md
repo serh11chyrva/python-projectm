@@ -27,12 +27,12 @@ projectM installation. Python dependencies are installed by pip.
 | Platform | Python | Native wheel |
 | --- | --- | --- |
 | Windows x64 | CPython 3.11–3.14 | `win_amd64` |
-| Linux x86_64, glibc 2.28+ | CPython 3.11–3.14 | `manylinux_2_28_x86_64` |
 
 Rendering requires **desktop OpenGL 3.3+**, a compatible system graphics driver,
 and a graphical session or an application-provided compatible context. NumPy
-output still uses OpenGL. ARM, macOS, Alpine/musl, and free-threaded Python are
-outside the current supported binary matrix. PyPI contains wheels only, so pip
+output still uses OpenGL. Version 1.0.0 supports Windows x64 only; Linux, macOS,
+ARM, and free-threaded Python are outside the supported binary matrix.
+PyPI contains wheels only, so pip
 does not fall back to compiling this project on an unsupported platform.
 
 Install an integration when needed:
@@ -44,8 +44,8 @@ python -m pip install "python-projectm[pyside6]"
 
 The ModernGL adapter uses your application's existing ModernGL installation.
 The default NumPy renderer creates a hidden GLFW window and needs the `glfw`
-extra; it can also borrow an application's context. The PySide6 extra has its
-own OS requirements, including glibc 2.34+ on Linux x86_64.
+extra; it can also borrow an application's context. The PySide6 extra follows
+Qt's own Windows system requirements.
 
 ## Quick start
 

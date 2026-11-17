@@ -2,7 +2,8 @@
 
 ## PyPI setup
 
-The release workflow publishes binary wheels only. The corresponding source
+Version 1.0.0 publishes one Windows x64 wheel for CPython 3.11–3.14.
+Linux and macOS wheels are outside this release. The corresponding source
 archive is a GitHub Release asset and is deliberately excluded from the PyPI
 upload, preventing pip from attempting native compilation on unsupported systems.
 
@@ -15,38 +16,60 @@ Before the first release, configure [PyPI Trusted Publishing](https://docs.pypi.
    publishing settings; verify that the release version is still available.
 3. Use GitHub owner `serh11chyrva`, repository `python-projectm`, workflow filename
    `release.yml`, and environment name `pypi`.
-4. Create the GitHub repository environment `pypi`. Restrict deployments to
-   release tags matching `v*`. The agreed workflow publishes automatically after
-   a stable GitHub Release; required reviewers are not part of this setup.
+4. Create the GitHub repository environment `pypi`. Under **Deployment branches
+   and tags**, select **Selected branches and tags** and add two rules: a
+   **Branch** rule for `main`, and a **Tag** rule for `v*`. Both are needed for
+   manual and GitHub Release publication respectively. If the environment
+   previously allowed only `v*` tags, add the `main` branch rule before a manual run.
+   Required reviewers are not part of the automatic publishing setup.
 
 No long-lived PyPI API token is used. Only the publishing job receives
 `id-token: write`; the asset-upload job separately receives `contents: write`.
 PR and ordinary CI jobs have read-only repository permissions. Creating the
 workflow files does not configure either service account automatically.
 
-## Release procedure
+## Manual publication from main
 
 1. Keep `pyproject.toml` at the intended version (`1.0.0` for the first release),
    update the changelog with the release date, and merge the release changes.
-2. Wait for the commit's CI checks: unit suites, strict Sphinx HTML, corresponding
-   sources, both platform wheels, installed rendering suites, and the Linux
-   glibc 2.28 load check. Review artifacts and native build details.
-3. Tag that commit `v1.0.0` and publish a stable GitHub Release for the tag. A
-   published prerelease does not trigger production publication.
-4. `release.yml` calls the same CI workflow for the tag and requires all its
-   jobs to succeed. The tag must exactly match the stable version in metadata.
-5. The workflow attaches the two verified wheels, `python_projectm-<version>.tar.gz`,
-   and `SHA256SUMS` to that GitHub Release. This makes corresponding sources
-   available before PyPI publication.
+2. Open the repository's **Actions** tab, select **Publish release**, click
+   **Run workflow**, select branch **main**, and confirm **Run workflow**.
+   `workflow_dispatch` starts a publishing run, not an immediate upload.
+3. The workflow captures that commit and reads the stable version from its
+   metadata. If `v1.0.0` already exists, it must point to the same commit.
+   Existing release tags are never moved or overwritten.
+4. The workflow calls the shared CI and requires every job to pass: Windows
+   unit tests on Python 3.11–3.14, strict Sphinx HTML, corresponding sources,
+   the Windows wheel, and installed OpenGL tests on all four Python versions.
+   Documentation and source-archive jobs use Ubuntu without Linux native builds.
+5. After CI succeeds, it creates the matching stable GitHub Release and tag if
+   absent, using the exact tested commit. An existing release must be published
+   and stable. It attaches the verified Windows wheel,
+   `python_projectm-<version>.tar.gz`, and `SHA256SUMS`. This makes corresponding
+   sources available before PyPI publication.
 6. The publishing job downloads those same wheel artifacts and uploads them
    through the PyPA publish action with OIDC and its provenance attestations.
    It does not rebuild, retag, or upload the source archive.
-7. Inspect the PyPI description and documentation link, confirm both platform
-   files are present, and activate matching Read the Docs versions as needed.
+7. Inspect the PyPI description and documentation link, confirm the
+   `py3-none-win_amd64.whl` file is present, and activate the matching Read the Docs
+   version as needed.
 
-GitHub Release publication is the publishing trigger. Pushes, pull requests,
-and manual runs of `ci.yml` build artifacts without publishing them. Package
-versions and filenames on PyPI cannot be overwritten: if a release upload fails,
+The manual publishing run must use `main`. Do not run `release.yml` until the
+PyPI publisher and GitHub `pypi` environment are configured: a successful run
+publishes the package automatically after CI.
+
+## Publication from a GitHub Release
+
+Alternatively, tag the intended commit `v1.0.0` and publish a stable GitHub
+Release. That event starts the same CI, asset-upload, and PyPI publishing jobs.
+The tag must exactly match the stable project version. Published prereleases
+do not trigger production publication. A Release created by the manual workflow
+using `GITHUB_TOKEN` does not start a second publishing run.
+
+Pushes, pull requests, and manual runs of `ci.yml` build artifacts without
+publishing them. Only `release.yml` publishes, through its manual trigger or a
+stable GitHub Release. Publishing runs are serialized to avoid overlapping uploads.
+Package versions and filenames on PyPI cannot be overwritten: if a release upload fails,
 inspect whether any files were accepted before retrying or choosing a new version.
 No automatic `skip-existing` policy hides conflicting uploads.
 
@@ -67,14 +90,14 @@ Wheels use `py3-none` platform tags because ctypes does not depend on a Python
 extension ABI. Windows repair uses `--analyze-existing` to inspect packaged DLLs
 and `--ignore-existing` to resolve dependencies from inside the extracted wheel.
 It preserves DLL filenames and checks that every non-system PE dependency is
-bundled. Linux builds and auditwheel repair enforce manylinux_2_28, with relative
-runtime library paths.
+bundled. Release artifact checks require the `win_amd64` platform tag and reject
+non-Windows native binaries.
 The installed suite checks loading and rendering without build-machine paths;
 CI fails if an expected integration is skipped.
 
 Each wheel contains `python_projectm/native/native-build.txt` with compiler,
 flags, source checksum, and framebuffer adaptation details. Actions are pinned
-to commits, native inputs to checksums/baselines, and manylinux to a dated image.
+to commits and native inputs to checksums/baselines.
 These controls identify build inputs; they do not promise bit-for-bit identical
 native binaries across hosted compiler image updates. See [licensing](licensing.md)
 and [source builds](source-build.md) for replacement and rebuild instructions.

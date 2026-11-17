@@ -5,6 +5,9 @@ Source builds are for development and modified native libraries. They require
 a C++ compiler, system OpenGL development files, and network access to build
 tools and any native sources not already present.
 
+Version 1.0.0 is built and tested for Windows x64 only. Other platforms are not
+part of the supported release or CI matrix.
+
 The build backend is scikit-build-core. Building a wheel or running `uv sync`
 now invokes CMake and builds both projectM and the wrapper. Runtime Python
 dependencies remain recorded in `uv.lock`; build tools are pinned separately
@@ -61,19 +64,6 @@ projectM and `pypm_capi`, installs them and GLEW into the package, and includes
 the Release MSVC runtime for app-local deployment. It does not require a
 system-wide projectM installation. Use `--extra pyside6` or `--all-extras` as needed.
 
-## Linux x86_64
-
-For an Ubuntu development machine, install a C++ compiler and OpenGL headers:
-
-```console
-sudo apt-get install build-essential libgl1-mesa-dev libx11-dev libxext-dev
-uv sync --locked --extra glfw
-```
-
-The local wheel targets the build machine. Portable release wheels are built
-by CI in the pinned manylinux_2_28 image and repaired with auditwheel. Do not
-retag a wheel built on a newer system to claim older glibc compatibility.
-
 ## Editable development and native changes
 
 `uv sync` installs editable Python sources and installed native resources.
@@ -105,8 +95,8 @@ Manual builds copy runtime libraries to `python_projectm/native/bin/` by default
 Set `PYPM_COPY_NATIVE_TO_SOURCE=OFF` to disable this. PEP 517 builds disable it
 and use CMake's `python` install component, so old local DLLs cannot enter a wheel.
 To select a manual build explicitly, set `PYTHON_PROJECTM_LIBRARY` to its wrapper's
-absolute path before the first native call. Windows sibling DLLs are discovered
-from that directory; Linux builds use relative library paths.
+absolute path before the first native call. Sibling DLLs are discovered
+from that directory.
 
 Build through the root project. Its generated `ProjectM.cpp` adaptation preserves
 the caller's draw framebuffer. An unrelated prebuilt projectM 4.1.6 library does
@@ -118,10 +108,10 @@ not provide this behavior. Upstream source files and the public C ABI are retain
 uv build --wheel
 ```
 
-The backend builds native libraries automatically. Windows produces a
-`py3-none-win_amd64` wheel. A local Linux wheel requires manylinux construction
-and repair before public distribution. The [release workflow](publishing.md)
-does this and tests the resulting wheel on every supported Python version.
+The backend builds native libraries automatically and produces a
+`py3-none-win_amd64` wheel. The [release workflow](publishing.md) repairs and
+tests the resulting Windows wheel on every supported Python version before
+publishing it to PyPI.
 
 Tests and documentation builds are separate actions; see
 [tests](https://github.com/serh11chyrva/python-projectm/blob/main/tests/README.md)
